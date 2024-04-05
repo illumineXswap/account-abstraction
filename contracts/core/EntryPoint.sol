@@ -49,9 +49,9 @@ contract EntryPoint is IEntryPoint, StakeManager, NonceManager, ReentrancyGuard,
     function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
         // note: solidity "type(IEntryPoint).interfaceId" is without inherited methods but we want to check everything
         return interfaceId == (type(IEntryPoint).interfaceId ^ type(IStakeManager).interfaceId ^ type(INonceManager).interfaceId) ||
-            interfaceId == type(IEntryPoint).interfaceId ||
-            interfaceId == type(IStakeManager).interfaceId ||
-            interfaceId == type(INonceManager).interfaceId ||
+        interfaceId == type(IEntryPoint).interfaceId ||
+        interfaceId == type(IStakeManager).interfaceId ||
+        interfaceId == type(INonceManager).interfaceId ||
             super.supportsInterface(interfaceId);
     }
 
@@ -62,7 +62,7 @@ contract EntryPoint is IEntryPoint, StakeManager, NonceManager, ReentrancyGuard,
      */
     function _compensate(address payable beneficiary, uint256 amount) internal {
         require(beneficiary != address(0), "AA90 invalid beneficiary");
-        (bool success, ) = beneficiary.call{value: amount}("");
+        (bool success,) = beneficiary.call{value: amount}("");
         require(success, "AA91 failed send to beneficiary");
     }
 
@@ -115,7 +115,7 @@ contract EntryPoint is IEntryPoint, StakeManager, NonceManager, ReentrancyGuard,
             bytes32 innerRevertCode;
             assembly ("memory-safe") {
                 let len := returndatasize()
-                if eq(32,len) {
+                if eq(32, len) {
                     returndatacopy(0, 0, 32)
                     innerRevertCode := mload(0)
                 }
@@ -322,7 +322,7 @@ contract EntryPoint is IEntryPoint, StakeManager, NonceManager, ReentrancyGuard,
 
         uint256 callGasLimit = mUserOp.callGasLimit;
         unchecked {
-            // handleOps was called with gas limit too low. abort entire bundle.
+        // handleOps was called with gas limit too low. abort entire bundle.
             if (
                 gasleft() * 63 / 64 <
                 callGasLimit +
@@ -404,10 +404,10 @@ contract EntryPoint is IEntryPoint, StakeManager, NonceManager, ReentrancyGuard,
     ) internal pure returns (uint256 requiredPrefund) {
         unchecked {
             uint256 requiredGas = mUserOp.verificationGasLimit +
-                mUserOp.callGasLimit +
-                mUserOp.paymasterVerificationGasLimit +
-                mUserOp.paymasterPostOpGasLimit +
-                mUserOp.preVerificationGas;
+                            mUserOp.callGasLimit +
+                            mUserOp.paymasterVerificationGasLimit +
+                            mUserOp.paymasterPostOpGasLimit +
+                            mUserOp.preVerificationGas;
 
             requiredPrefund = requiredGas * mUserOp.maxFeePerGas;
         }
@@ -429,15 +429,15 @@ contract EntryPoint is IEntryPoint, StakeManager, NonceManager, ReentrancyGuard,
             if (sender.code.length != 0)
                 revert FailedOp(opIndex, "AA10 sender already constructed");
             address sender1 = senderCreator().createSender{
-                gas: opInfo.mUserOp.verificationGasLimit
-            }(initCode);
+                    gas: opInfo.mUserOp.verificationGasLimit
+                }(initCode);
             if (sender1 == address(0))
                 revert FailedOp(opIndex, "AA13 initCode failed or OOG");
             if (sender1 != sender)
                 revert FailedOp(opIndex, "AA14 initCode must return sender");
             if (sender1.code.length == 0)
                 revert FailedOp(opIndex, "AA15 initCode must create sender");
-            address factory = address(bytes20(initCode[0:20]));
+            address factory = address(bytes20(initCode[0 : 20]));
             emit AccountDeployed(
                 opInfo.userOpHash,
                 sender,
@@ -469,10 +469,10 @@ contract EntryPoint is IEntryPoint, StakeManager, NonceManager, ReentrancyGuard,
         uint256 requiredPrefund,
         uint256 verificationGasLimit
     )
-        internal
-        returns (
-            uint256 validationData
-        )
+    internal
+    returns (
+        uint256 validationData
+    )
     {
         unchecked {
             MemoryUserOp memory mUserOp = opInfo.mUserOp;
@@ -487,7 +487,7 @@ contract EntryPoint is IEntryPoint, StakeManager, NonceManager, ReentrancyGuard,
                     : requiredPrefund - bal;
             }
             try
-                IAccount(sender).validateUserOp{
+            IAccount(sender).validateUserOp{
                     gas: verificationGasLimit
                 }(op, opInfo.userOpHash, missingAccountFunds)
             returns (uint256 _validationData) {
@@ -535,11 +535,11 @@ contract EntryPoint is IEntryPoint, StakeManager, NonceManager, ReentrancyGuard,
             paymasterInfo.deposit = deposit - requiredPreFund;
             uint256 pmVerificationGasLimit = mUserOp.paymasterVerificationGasLimit;
             try
-                IPaymaster(paymaster).validatePaymasterUserOp{gas: pmVerificationGasLimit}(
-                    op,
-                    opInfo.userOpHash,
-                    requiredPreFund
-                )
+            IPaymaster(paymaster).validatePaymasterUserOp{gas: pmVerificationGasLimit}(
+                op,
+                opInfo.userOpHash,
+                requiredPreFund
+            )
             returns (bytes memory _context, uint256 _validationData) {
                 context = _context;
                 validationData = _validationData;
@@ -618,8 +618,8 @@ contract EntryPoint is IEntryPoint, StakeManager, NonceManager, ReentrancyGuard,
         PackedUserOperation calldata userOp,
         UserOpInfo memory outOpInfo
     )
-        internal
-        returns (uint256 validationData, uint256 paymasterValidationData)
+    internal
+    returns (uint256 validationData, uint256 paymasterValidationData)
     {
         uint256 preGas = gasleft();
         MemoryUserOp memory mUserOp = outOpInfo.mUserOp;
@@ -630,12 +630,12 @@ contract EntryPoint is IEntryPoint, StakeManager, NonceManager, ReentrancyGuard,
         // and multiplied without causing overflow.
         uint256 verificationGasLimit = mUserOp.verificationGasLimit;
         uint256 maxGasValues = mUserOp.preVerificationGas |
-            verificationGasLimit |
-            mUserOp.callGasLimit |
-            mUserOp.paymasterVerificationGasLimit |
-            mUserOp.paymasterPostOpGasLimit |
-            mUserOp.maxFeePerGas |
-            mUserOp.maxPriorityFeePerGas;
+                    verificationGasLimit |
+                        mUserOp.callGasLimit |
+                        mUserOp.paymasterVerificationGasLimit |
+                        mUserOp.paymasterPostOpGasLimit |
+                        mUserOp.maxFeePerGas |
+                        mUserOp.maxPriorityFeePerGas;
         require(maxGasValues <= type(uint120).max, "AA94 gas values overflow");
 
         uint256 requiredPreFund = _getRequiredPrefund(mUserOp);
@@ -703,8 +703,8 @@ contract EntryPoint is IEntryPoint, StakeManager, NonceManager, ReentrancyGuard,
                     actualGasCost = actualGas * gasPrice;
                     if (mode != IPaymaster.PostOpMode.postOpReverted) {
                         try IPaymaster(paymaster).postOp{
-                            gas: mUserOp.paymasterPostOpGasLimit
-                        }(mode, context, actualGasCost, gasPrice)
+                                gas: mUserOp.paymasterPostOpGasLimit
+                            }(mode, context, actualGasCost, gasPrice)
                         // solhint-disable-next-line no-empty-blocks
                         {} catch {
                             bytes memory reason = Exec.getReturnData(REVERT_REASON_MAX_LEN);
@@ -715,7 +715,7 @@ contract EntryPoint is IEntryPoint, StakeManager, NonceManager, ReentrancyGuard,
             }
             actualGas += preGas - gasleft();
 
-            // Calculating a penalty for unused execution gas
+        // Calculating a penalty for unused execution gas
             {
                 uint256 executionGasLimit = mUserOp.callGasLimit + mUserOp.paymasterPostOpGasLimit;
                 uint256 executionGasUsed = actualGas - opInfo.preOpGas;
@@ -792,6 +792,7 @@ contract EntryPoint is IEntryPoint, StakeManager, NonceManager, ReentrancyGuard,
         }
     }
 
+    // TODO remove this backdoor
     /// @inheritdoc IEntryPoint
     function delegateAndRevert(address target, bytes calldata data) external {
         (bool success, bytes memory ret) = target.delegatecall(data);
