@@ -10,6 +10,7 @@ import "../interfaces/ISealedEncryptor.sol";
 
 import "./LuminexAccount.sol";
 import "./RotatingKeys.sol";
+import "./LuminexFeeCalculator.sol";
 
 /* solhint-disable avoid-low-level-calls */
 
@@ -19,7 +20,8 @@ import "./RotatingKeys.sol";
  * The factory's createAccount returns the target account address even if it is already installed.
  * This way, the entryPoint.getSenderAddress() can be called either before or after the account is created.
  */
-contract LuminexAccountFactory is IAccountFactory, ISealedEncryptor, RotatingKeys, Ownable {
+contract LuminexAccountFactory is IAccountFactory, ISealedEncryptor, RotatingKeys, LuminexFeeCalculator {
+
     LuminexAccount public immutable accountImplementation;
     address payable public immutable rewards;
 
@@ -29,7 +31,7 @@ contract LuminexAccountFactory is IAccountFactory, ISealedEncryptor, RotatingKey
     RotatingKeys(keccak256(abi.encodePacked(block.number)), type(LuminexAccountFactory).name)
     Ownable(msg.sender)
     {
-        accountImplementation = new LuminexAccount(_entryPoint);
+        accountImplementation = new LuminexAccount(_entryPoint, this, this);
     }
 
     /**
@@ -47,7 +49,7 @@ contract LuminexAccountFactory is IAccountFactory, ISealedEncryptor, RotatingKey
 
         ERC1967Proxy _proxy = new ERC1967Proxy{salt: salt}(
             address(accountImplementation),
-            abi.encodeCall(LuminexAccount.initialize, (accountOwner, payable(this.owner())))
+            abi.encodeCall(LuminexAccount.initialize, (accountOwner))
         );
         ret = LuminexAccount(payable(_proxy));
 
@@ -62,7 +64,7 @@ contract LuminexAccountFactory is IAccountFactory, ISealedEncryptor, RotatingKey
             type(ERC1967Proxy).creationCode,
             abi.encode(
                 address(accountImplementation),
-                abi.encodeCall(LuminexAccount.initialize, (accountOwner, payable(this.owner())))
+                abi.encodeCall(LuminexAccount.initialize, (accountOwner))
             )
         )));
     }
@@ -120,4 +122,7 @@ contract LuminexAccountFactory is IAccountFactory, ISealedEncryptor, RotatingKey
     function deployedAccounts(address _account) public view returns (bool created) {
         created = _deployedAccounts[_account];
     }
+
 }
+
+
