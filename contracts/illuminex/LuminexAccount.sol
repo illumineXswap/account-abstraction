@@ -5,6 +5,8 @@ pragma solidity ^0.8.23;
 /* solhint-disable no-inline-assembly */
 /* solhint-disable reason-string */
 
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
@@ -23,6 +25,8 @@ import "../interfaces/ISealedEncryptor.sol";
   */
 contract LuminexAccount is BaseAccount, UUPSUpgradeable, Initializable {
     address public owner;
+
+    using SafeERC20 for IERC20;
 
     IEntryPoint private immutable _entryPoint;
     IFeeCalculator private immutable _feeConfig;
@@ -61,8 +65,7 @@ contract LuminexAccount is BaseAccount, UUPSUpgradeable, Initializable {
      * @param value the value to pass in this call
      * @param func the calldata to pass in this call
      */
-    function execute(address dest, uint256 value, bytes calldata func) external {
-        _requireFromEntryPointOrOwnerOrSelf();
+    function execute(address dest, uint256 value, bytes calldata func) external onlyTrusted {
         _call(dest, value, func);
     }
 
@@ -70,8 +73,7 @@ contract LuminexAccount is BaseAccount, UUPSUpgradeable, Initializable {
      * execute a transaction (called directly from owner, or by entryPoint)
      * @param encryptedCall encrypted call data
      */
-    function executeEncrypted(bytes calldata encryptedCall) external {
-        _requireFromEntryPointOrOwnerOrSelf();
+    function executeEncrypted(bytes calldata encryptedCall) external onlyTrusted {
         (address dest, uint256 value, bytes memory func) = abi.decode(
             _encryption.decryptForMe(encryptedCall),
             (address, uint256, bytes)
@@ -86,8 +88,7 @@ contract LuminexAccount is BaseAccount, UUPSUpgradeable, Initializable {
      * @param value an array of values to pass to each call. can be zero-length for no-value calls
      * @param func an array of calldata to pass to each call
      */
-    function executeBatch(address[] calldata dest, uint256[] calldata value, bytes[] calldata func) external {
-        _requireFromEntryPointOrOwnerOrSelf();
+    function executeBatch(address[] calldata dest, uint256[] calldata value, bytes[] calldata func) external onlyTrusted {
         require(dest.length == func.length && (value.length == 0 || value.length == func.length), "wrong array lengths");
         if (value.length == 0) {
             for (uint256 i = 0; i < dest.length; i++) {
@@ -114,6 +115,11 @@ contract LuminexAccount is BaseAccount, UUPSUpgradeable, Initializable {
         owner = anOwner;
 
         emit SimpleAccountInitialized(_entryPoint, owner);
+    }
+
+    modifier onlyTrusted() {
+        _requireFromEntryPointOrOwnerOrSelf();
+        _;
     }
 
     // Require the function call went through EntryPoint or owner
@@ -146,7 +152,6 @@ contract LuminexAccount is BaseAccount, UUPSUpgradeable, Initializable {
         }
     }
 
-    // TODO implement transfer
     // TODO implement transfer with hook
 
     /**
@@ -162,6 +167,17 @@ contract LuminexAccount is BaseAccount, UUPSUpgradeable, Initializable {
     function addDeposit() public payable {
         entryPoint().depositTo{value: msg.value}(address(this));
     }
+
+    function balanceOfERC20(IERC20 token) public view onlyTrusted returns (uint256) {
+        return token.balanceOf(address(this));
+    }
+
+    function transferERC20(IERC20 token, uint256 amount, address receiver) public onlyTrusted {
+        (address _feeReceiver, uint256 _fee, uint256 _resultAmount) = _feeConfig.getFeesReceiver(token, amount);
+        token.safeTransfer(_feeReceiver, _fee);
+        token.safeTransfer(receiver, _resultAmount);
+    }
+
 
     /**
      * withdraw value from the account's deposit
