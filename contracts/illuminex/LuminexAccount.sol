@@ -12,6 +12,8 @@ import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 import "../core/BaseAccount.sol";
 import "../core/Helpers.sol";
+import "../interfaces/IFeeCalculator.sol";
+import "../interfaces/ISealedEncryptor.sol";
 
 /**
   * minimal account.
@@ -23,6 +25,8 @@ contract LuminexAccount is BaseAccount, UUPSUpgradeable, Initializable {
     address public owner;
 
     IEntryPoint private immutable _entryPoint;
+    IFeeCalculator private immutable _feeConfig;
+    ISealedEncryptor private immutable _encryption;
 
     event SimpleAccountInitialized(IEntryPoint indexed entryPoint, address indexed owner);
 
@@ -39,8 +43,10 @@ contract LuminexAccount is BaseAccount, UUPSUpgradeable, Initializable {
     // solhint-disable-next-line no-empty-blocks
     receive() external payable {}
 
-    constructor(IEntryPoint anEntryPoint) {
+    constructor(IEntryPoint anEntryPoint, IFeeCalculator aFeeConfig, ISealedEncryptor anEncryptor) {
         _entryPoint = anEntryPoint;
+        _feeConfig = aFeeConfig;
+        _encryption = anEncryptor;
         _disableInitializers();
     }
 
@@ -87,11 +93,11 @@ contract LuminexAccount is BaseAccount, UUPSUpgradeable, Initializable {
      * the implementation by calling `upgradeTo()`
      * @param anOwner the owner (signer) of this account
      */
-    function initialize(address anOwner, address payable rewards) public virtual initializer {
-        _initialize(anOwner, rewards);
+    function initialize(address anOwner) public virtual initializer {
+        _initialize(anOwner);
     }
 
-    function _initialize(address anOwner, address payable rewards) internal virtual {
+    function _initialize(address anOwner) internal virtual {
         owner = anOwner;
 
         emit SimpleAccountInitialized(_entryPoint, owner);
