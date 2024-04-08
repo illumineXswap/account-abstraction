@@ -67,6 +67,19 @@ contract LuminexAccount is BaseAccount, UUPSUpgradeable, Initializable {
     }
 
     /**
+     * execute a transaction (called directly from owner, or by entryPoint)
+     * @param encryptedCall encrypted call data
+     */
+    function executeEncrypted(bytes calldata encryptedCall) external {
+        _requireFromEntryPointOrOwnerOrSelf();
+        (address dest, uint256 value, bytes memory func) = abi.decode(
+            _encryption.decryptForMe(encryptedCall),
+            (address, uint256, bytes)
+        );
+        _call(dest, value, func);
+    }
+
+    /**
      * execute a sequence of transactions
      * @dev to reduce gas consumption for trivial case (no value), use a zero-length array to mean zero value
      * @param dest an array of destination addresses
@@ -133,7 +146,6 @@ contract LuminexAccount is BaseAccount, UUPSUpgradeable, Initializable {
         }
     }
 
-    // TODO implement executeEncrypted
     // TODO implement transfer
     // TODO implement transfer with hook
 
