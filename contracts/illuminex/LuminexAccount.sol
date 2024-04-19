@@ -56,7 +56,7 @@ contract LuminexAccount is BaseAccount, UUPSUpgradeable, Initializable {
 
     function _onlyOwner() internal view {
         //directly from EOA owner, or through the account itself (which gets redirected through execute())
-        require(msg.sender == owner || msg.sender == address(this), "only owner");
+        require(msg.sender == owner || msg.sender == address(this), "IX-AA11 only owner");
     }
 
     /**
@@ -128,7 +128,7 @@ contract LuminexAccount is BaseAccount, UUPSUpgradeable, Initializable {
             msg.sender == address(entryPoint()) ||
             msg.sender == owner ||
             msg.sender == address(this),
-            "account: not Owner or EntryPoint"
+            "IX-AA10 no Owner nor EntryPoint"
         );
     }
 
@@ -138,8 +138,10 @@ contract LuminexAccount is BaseAccount, UUPSUpgradeable, Initializable {
         bytes32 userOpHash
     ) internal override virtual returns (uint256 validationData) {
         bytes32 hash = MessageHashUtils.toEthSignedMessageHash(userOpHash);
-        if (owner != ECDSA.recover(hash, userOp.signature))
-            return SIG_VALIDATION_FAILED;
+        // NOTE:
+        // We raise error instead of returning SIG_VALIDATION_FAILED so that even simulation can't leak anything
+        // without user approval.
+        require(owner == ECDSA.recover(hash, userOp.signature), "IX-AA20 denied");
         return SIG_VALIDATION_SUCCESS;
     }
 
@@ -177,7 +179,6 @@ contract LuminexAccount is BaseAccount, UUPSUpgradeable, Initializable {
         token.safeTransfer(_feeReceiver, _fee);
         token.safeTransfer(receiver, _resultAmount);
     }
-
 
     /**
      * withdraw value from the account's deposit
