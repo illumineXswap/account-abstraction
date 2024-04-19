@@ -30,12 +30,11 @@ contract EntryPointSimulations is EntryPoint, IEntryPointSimulations {
         return _senderCreator;
     }
 
-    /**
-     * simulation contract should not be deployed, and specifically, accounts should not trust
-     * it as entrypoint, since the simulation functions don't check the signatures
-     */
     constructor() {
-        require(block.number < 100, "should not be deployed");
+        /// NOTE: we can deploy this contract since it only will be used as trustedDelegate for original EP
+        ///   and all accounts revert any validations if signature is invalid
+
+        // require(block.number < 100, "should not be deployed");
     }
 
     /// @inheritdoc IEntryPointSimulations
