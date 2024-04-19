@@ -17,6 +17,7 @@ import "./UserOperationLib.sol";
 
 import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
 /*
  * Account-Abstraction (EIP-4337) singleton EntryPoint implementation.
@@ -24,7 +25,7 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
  */
 
 /// @custom:security-contact https://bounty.ethereum.org
-contract EntryPoint is IEntryPoint, StakeManager, NonceManager, ReentrancyGuard, ERC165 {
+contract EntryPoint is IEntryPoint, Ownable, StakeManager, NonceManager, ReentrancyGuard, ERC165 {
 
     using UserOperationLib for PackedUserOperation;
 
@@ -33,6 +34,10 @@ contract EntryPoint is IEntryPoint, StakeManager, NonceManager, ReentrancyGuard,
     function senderCreator() internal view virtual returns (SenderCreator) {
         return _senderCreator;
     }
+
+    constructor()
+    Ownable(msg.sender)
+    {}
 
     //compensate for innerHandleOps' emit message and deposit refund.
     // allow some slack for future gas price changes.
@@ -44,6 +49,10 @@ contract EntryPoint is IEntryPoint, StakeManager, NonceManager, ReentrancyGuard,
 
     uint256 private constant REVERT_REASON_MAX_LEN = 2048;
     uint256 private constant PENALTY_PERCENT = 10;
+
+    event DelegateTrusted(address indexed delegate);
+    event DelegateDistrusted(address indexed delegate);
+    mapping(address => bool) public trustedDelegates;
 
     /// @inheritdoc IERC165
     function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
@@ -792,10 +801,20 @@ contract EntryPoint is IEntryPoint, StakeManager, NonceManager, ReentrancyGuard,
         }
     }
 
-    // TODO remove this backdoor
+    function trustDelegate(address delegate) public onlyOwner {
+        trustedDelegates[delegate] = true;
+        emit DelegateTrusted(delegate);
+    }
+
+    function distrustDelegate(address delegate) public onlyOwner {
+        delete trustedDelegates[delegate];
+        emit DelegateDistrusted(delegate);
+    }
+
     /// @inheritdoc IEntryPoint
-    function delegateAndRevert(address target, bytes calldata data) external {
-        (bool success, bytes memory ret) = target.delegatecall(data);
+    function delegateAndRevert(address delegate, bytes calldata data) external {
+        require(trustedDelegates[delegate], "IX-EP10 untrusted delegate");
+        (bool success, bytes memory ret) = delegate.delegatecall(data);
         revert DelegateAndRevert(success, ret);
     }
 }
