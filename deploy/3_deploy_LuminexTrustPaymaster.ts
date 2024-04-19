@@ -5,22 +5,22 @@ import { ethers } from 'hardhat'
 const deploySimpleAccountFactory: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const provider = ethers.provider
   const from = await provider.getSigner().getAddress()
-  const network = await provider.getNetwork()
-  // only deploy on local test network.
-  if (network.chainId !== 31337 && network.chainId !== 1337) {
-    return
-  }
 
   const entrypoint = await hre.deployments.get('EntryPoint')
-  const ret = await hre.deployments.deploy(
-    'SimpleAccountFactory', {
+  const paymasterDeployed = await hre.deployments.deploy(
+    'LuminexTrustPaymaster', {
       from,
       args: [entrypoint.address],
       gasLimit: 6e6,
-      log: true,
-      deterministicDeployment: true
+      log: true
     })
-  console.log('==SimpleAccountFactory addr=', ret.address)
+
+  const paymaster = await ethers.getContractAt('LuminexTrustPaymaster', paymasterDeployed.address)
+
+  if (!await paymaster.trustedAccountFactories(entrypoint.address)) {
+    await paymaster.trustAccountFactory(entrypoint.address)
+    console.log('Trusted account factory set', entrypoint.address)
+  }
 }
 
 export default deploySimpleAccountFactory
