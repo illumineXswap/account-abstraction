@@ -1,3 +1,4 @@
+import '@oasisprotocol/sapphire-hardhat'
 import '@nomiclabs/hardhat-waffle'
 import '@typechain/hardhat'
 import { HardhatUserConfig, task } from 'hardhat/config'
@@ -55,9 +56,10 @@ const config: HardhatUserConfig = {
     }
   },
   networks: {
-    dev: { url: 'http://localhost:8545' },
+    dev: getNetwork1('http://localhost:8545'),
     // github action starts localgeth service, for gas calculations
-    localgeth: { url: 'http://localgeth:8545' },
+    localgeth: getNetwork1('http://localhost:8545'),
+    sapphire_local: { ...getNetwork1('http://localhost:8545'), chainId: 0x5afd },
     goerli: getNetwork('goerli'),
     sepolia: getNetwork('sepolia'),
     proxy: getNetwork1('http://localhost:8545')
