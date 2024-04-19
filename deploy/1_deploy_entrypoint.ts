@@ -6,15 +6,15 @@ const deployEntryPoint: DeployFunction = async function (hre: HardhatRuntimeEnvi
   const provider = ethers.provider
   const from = await provider.getSigner().getAddress()
 
-  const ret = await hre.deployments.deploy(
-    'EntryPoint', {
+  await hre.deployments.deploy(
+    'EntryPoint',
+    {
       from,
       args: [],
       gasLimit: 6e6,
-      deterministicDeployment: process.env.SALT ?? true,
       log: true
-    })
-  console.log('==entrypoint addr=', ret.address)
+    }
+  )
 }
 
 export default deployEntryPoint
