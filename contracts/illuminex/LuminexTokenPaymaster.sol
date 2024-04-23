@@ -5,12 +5,12 @@ pragma solidity ^0.8.23;
 /* solhint-disable no-inline-assembly */
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import "../core/BasePaymaster.sol";
-import "../core/UserOperationLib.sol";
 import "../core/Helpers.sol";
 import "../interfaces/IAccountFactory.sol";
+import "./LuminexFeeCalculator.sol";
 
 /**
  * A sample paymaster that uses external service to decide whether to pay for the UserOp.
@@ -21,19 +21,16 @@ import "../interfaces/IAccountFactory.sol";
  * - the paymaster checks a signature to agree to PAY for GAS.
  * - the account checks a signature to prove identity and account ownership.
  */
-contract LuminexTrustPaymaster is BasePaymaster {
-    using SafeERC20 for ERC20;
+contract LuminexTokenPaymaster is BasePaymaster, LuminexFeeCalculator {
+    using SafeERC20 for IERC20;
 
-    using UserOperationLib for PackedUserOperation;
-
-    mapping(address => bool) public trustedAccountFactories;
+    using UserOperationLib for UserOperation;
 
     event TrustAccountFactory(address indexed factory);
     event DistrustAccountFactory(address indexed factory);
 
-    bytes private constant EMPTY_CONTEXT = "";
-    uint256 private constant VALID_TIMESTAMP_OFFSET = PAYMASTER_DATA_OFFSET;
-    uint256 private constant ACCOUNT_FACTORY_OFFSET = VALID_TIMESTAMP_OFFSET + 64;
+    // TODO calculate cost of postOp
+    uint256 constant public COST_OF_POST = 15000;
 
     constructor(
         IEntryPoint _entryPoint
@@ -47,51 +44,47 @@ contract LuminexTrustPaymaster is BasePaymaster {
      * paymasterAndData[84:] : signature
      */
     function _validatePaymasterUserOp(
-        PackedUserOperation calldata userOp,
+        UserOperation calldata userOp,
         bytes32 /*userOpHash*/,
-        uint256 /*requiredPreFund*/
+        uint256 requiredPreFund
     )
     internal
     view
     override
     returns (bytes memory context, uint256 validationData)
     {
-        (uint48 validUntil, uint48 validAfter) = abi.decode(
-            userOp.paymasterAndData[VALID_TIMESTAMP_OFFSET :],
-            (uint48, uint48)
+        (IERC20 token, uint256 maxAllowance) = abi.decode(userOp.paymasterAndData[20 :], (IERC20, uint256));
+
+        require(feeConfigs[token].proportionalDenominator > 0, "IX-TP10 token unknown");
+
+        uint256 charge = getTokenValueOfGas(token, requiredPreFund);
+        require(charge <= maxAllowance, "IX-TP11 above max pay");
+
+        require(userOp.verificationGasLimit > COST_OF_POST, "IX-TP12 not enough for postOp");
+
+        validationData = 0; // forever
+        context = abi.encode(
+            userOp.sender,
+            token,
+            maxAllowance
         );
-
-        address _accountFactory = address(0);
-
-        if (userOp.paymasterAndData.length == ACCOUNT_FACTORY_OFFSET + 20) {
-            (_accountFactory) = abi.decode(userOp.paymasterAndData[ACCOUNT_FACTORY_OFFSET :], (address));
-        }
-
-
-        bool _validationFailed = (
-            _accountFactory == address(0) ||
-            !trustedAccountFactories[_accountFactory] ||
-            !IAccountFactory(_accountFactory).deployedAccounts(userOp.sender)
-        );
-
-        return (EMPTY_CONTEXT, _packValidationData(_validationFailed, validUntil, validAfter));
     }
 
-    function trustAccountFactory(address factory) public onlyOwner {
-        trustedAccountFactories[factory] = true;
-        emit TrustAccountFactory(factory);
+    function _postOp(PostOpMode, bytes calldata context, uint256 actualGasCost) internal override {
+        (address sender, IERC20 token, uint256 maxAllowance) = abi.decode(context, (address, IERC20, uint256));
+        uint256 charge = getTokenValueOfGas(token, actualGasCost + COST_OF_POST);
+
+        require(charge <= maxAllowance, "IX-TP20 above max pay");
+
+        token.safeTransferFrom(sender, address(this), charge);
     }
 
-    function distrustAccountFactory(address factory) public onlyOwner {
-        trustedAccountFactories[factory] = false;
-        emit DistrustAccountFactory(factory);
-    }
 
     function skim(address payable to) public onlyOwner {
         to.transfer(address(this).balance);
     }
 
-    function skim(ERC20 token, address payable to) public onlyOwner {
+    function skim(IERC20 token, address payable to) public onlyOwner {
         token.safeTransfer(to, token.balanceOf(address(this)));
     }
 }
