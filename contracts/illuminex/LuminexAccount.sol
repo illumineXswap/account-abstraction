@@ -140,8 +140,6 @@ contract LuminexAccount is BaseAccount {
         }
     }
 
-    // TODO implement transfer with hook
-
     /**
      * check current account deposit in the entryPoint
      */
@@ -154,16 +152,6 @@ contract LuminexAccount is BaseAccount {
      */
     function addDeposit() public payable {
         entryPoint().depositTo{value: msg.value}(address(this));
-    }
-
-    function balanceOfERC20(IERC20 token) public view onlyTrusted returns (uint256) {
-        return token.balanceOf(address(this));
-    }
-
-    function transferERC20(IERC20 token, uint256 amount, address receiver) public onlyTrusted {
-        (address _feeReceiver, uint256 _fee, uint256 _resultAmount) = _feeConfig.getFeesReceiver(token, amount);
-        token.safeTransfer(_feeReceiver, _fee);
-        token.safeTransfer(receiver, _resultAmount);
     }
 
     /**
