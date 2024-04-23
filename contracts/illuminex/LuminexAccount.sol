@@ -14,7 +14,6 @@ import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 import "../core/BaseAccount.sol";
 import "../core/Helpers.sol";
-import "../interfaces/IFeeCalculator.sol";
 import "../interfaces/ISealedEncryptor.sol";
 
 /**
@@ -29,7 +28,6 @@ contract LuminexAccount is BaseAccount, UUPSUpgradeable, Initializable {
     using SafeERC20 for IERC20;
 
     IEntryPoint private immutable _entryPoint;
-    IFeeCalculator private immutable _feeConfig;
     ISealedEncryptor private immutable _encryption;
 
     event SimpleAccountInitialized(IEntryPoint indexed entryPoint, address indexed owner);
@@ -47,9 +45,8 @@ contract LuminexAccount is BaseAccount, UUPSUpgradeable, Initializable {
     // solhint-disable-next-line no-empty-blocks
     receive() external payable {}
 
-    constructor(IEntryPoint anEntryPoint, IFeeCalculator aFeeConfig, ISealedEncryptor anEncryptor) {
+    constructor(IEntryPoint anEntryPoint, ISealedEncryptor anEncryptor) {
         _entryPoint = anEntryPoint;
-        _feeConfig = aFeeConfig;
         _encryption = anEncryptor;
         _disableInitializers();
     }

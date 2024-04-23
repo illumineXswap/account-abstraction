@@ -20,7 +20,7 @@ import "./LuminexFeeCalculator.sol";
  * The factory's createAccount returns the target account address even if it is already installed.
  * This way, the entryPoint.getSenderAddress() can be called either before or after the account is created.
  */
-contract LuminexAccountFactory is IAccountFactory, ISealedEncryptor, RotatingKeys, LuminexFeeCalculator {
+contract LuminexAccountFactory is IAccountFactory, ISealedEncryptor, RotatingKeys {
 
     LuminexAccount public immutable accountImplementation;
     address payable public immutable rewards;
@@ -29,9 +29,8 @@ contract LuminexAccountFactory is IAccountFactory, ISealedEncryptor, RotatingKey
 
     constructor(IEntryPoint _entryPoint)
     RotatingKeys(keccak256(abi.encodePacked(block.number)), type(LuminexAccountFactory).name)
-    Ownable(msg.sender)
     {
-        accountImplementation = new LuminexAccount(_entryPoint, this, this);
+        accountImplementation = new LuminexAccount(_entryPoint, this);
     }
 
     /**
