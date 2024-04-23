@@ -24,8 +24,11 @@ import "../interfaces/ISealedEncryptor.sol";
   */
 contract LuminexAccount is BaseAccount, UUPSUpgradeable, Initializable {
     address public owner;
+    uint256 constant internal SIG_VALIDATION_SUCCESS = 0;
 
     using SafeERC20 for IERC20;
+    using UserOperationLib for UserOperation;
+    using ECDSA for bytes32;
 
     IEntryPoint private immutable _entryPoint;
     ISealedEncryptor private immutable _encryption;
@@ -131,10 +134,10 @@ contract LuminexAccount is BaseAccount, UUPSUpgradeable, Initializable {
 
     /// implement template method of BaseAccount
     function _validateSignature(
-        PackedUserOperation calldata userOp,
+        UserOperation calldata userOp,
         bytes32 userOpHash
     ) internal override virtual returns (uint256 validationData) {
-        bytes32 hash = MessageHashUtils.toEthSignedMessageHash(userOpHash);
+        bytes32 hash = userOpHash.toEthSignedMessageHash();
         // NOTE:
         // We raise error instead of returning SIG_VALIDATION_FAILED so that even simulation can't leak anything
         // without user approval.
