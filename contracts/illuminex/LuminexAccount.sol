@@ -8,6 +8,9 @@ pragma solidity ^0.8.23;
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 import "../core/BaseAccount.sol";
 import "../core/Helpers.sol";
@@ -19,7 +22,7 @@ import "../interfaces/ISealedEncryptor.sol";
   *  has execute, eth handling methods
   *  has a single signer that can send requests through the entryPoint.
   */
-contract LuminexAccount is BaseAccount {
+contract LuminexAccount is BaseAccount, UUPSUpgradeable, Initializable {
     address public owner;
     uint256 constant internal SIG_VALIDATION_SUCCESS = 0;
 
@@ -48,6 +51,7 @@ contract LuminexAccount is BaseAccount {
     constructor(IEntryPoint anEntryPoint, ISealedEncryptor anEncryptor) {
         _entryPoint = anEntryPoint;
         _encryption = anEncryptor;
+        _disableInitializers();
     }
 
     function _onlyOwner() internal view {
@@ -95,6 +99,16 @@ contract LuminexAccount is BaseAccount {
                 _call(dest[i], value[i], func[i]);
             }
         }
+    }
+
+    /**
+     * @dev The _entryPoint member is immutable, to reduce gas consumption.  To upgrade EntryPoint,
+     * a new implementation of LuminexAccount.sol must be deployed with the new EntryPoint address, then upgrading
+     * the implementation by calling `upgradeTo()`
+     * @param anOwner the owner (signer) of this account
+     */
+    function initialize(address anOwner) public virtual initializer {
+        _initialize(anOwner);
     }
 
     function _initialize(address anOwner) internal virtual {
@@ -161,6 +175,10 @@ contract LuminexAccount is BaseAccount {
      */
     function withdrawDepositTo(address payable withdrawAddress, uint256 amount) public onlyOwner {
         entryPoint().withdrawTo(withdrawAddress, amount);
+    }
+
+    function _authorizeUpgrade(address) internal view override {
+        _onlyOwner();
     }
 }
 
