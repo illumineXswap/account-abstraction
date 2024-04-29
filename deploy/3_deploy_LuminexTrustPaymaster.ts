@@ -7,20 +7,21 @@ const deploySimpleAccountFactory: DeployFunction = async function (hre: HardhatR
   const from = await provider.getSigner().getAddress()
 
   const entrypoint = await hre.deployments.get('EntryPoint')
-  const paymasterDeployed = await hre.deployments.deploy(
-    'LuminexTrustPaymaster', {
+  await hre.deployments.deploy(
+    'LuminexTokenPaymaster', {
       from,
       args: [entrypoint.address],
       gasLimit: 6e6,
-      log: true
+      log: true,
+      deterministicDeployment: true
     })
 
-  const paymaster = await ethers.getContractAt('LuminexTrustPaymaster', paymasterDeployed.address)
+  // const paymaster = await ethers.getContractAt('LuminexTokenPaymaster', paymasterDeployed.address)
 
-  if (!await paymaster.trustedAccountFactories(entrypoint.address)) {
-    await paymaster.trustAccountFactory(entrypoint.address)
-    console.log('Trusted account factory set', entrypoint.address)
-  }
+  // if (!await paymaster.trustedAccountFactories(entrypoint.address)) {
+  //   await paymaster.trustAccountFactory(entrypoint.address)
+  //   console.log('Trusted account factory set', entrypoint.address)
+  // }
 }
 
 export default deploySimpleAccountFactory

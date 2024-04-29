@@ -12,7 +12,8 @@ const deployEntryPoint: DeployFunction = async function (hre: HardhatRuntimeEnvi
       from,
       args: [],
       gasLimit: 6e6,
-      log: true
+      log: true,
+      deterministicDeployment: true
     }
   )
 }

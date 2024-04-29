@@ -12,12 +12,14 @@ const deployLuminexAccountFactory: DeployFunction = async function (hre: Hardhat
       from,
       args: [entrypoint.address],
       gasLimit: 6e6,
-      log: true
+      log: true,
+      deterministicDeployment: true
     })
 
   await hre.deployments.deploy('TestCounter', {
     from,
-    log: true
+    log: true,
+    deterministicDeployment: true
   })
 }
 
