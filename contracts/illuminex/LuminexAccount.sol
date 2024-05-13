@@ -140,8 +140,11 @@ contract LuminexAccount is BaseAccount, UUPSUpgradeable, Initializable {
         // NOTE:
         // We raise error instead of returning SIG_VALIDATION_FAILED so that even simulation can't leak anything
         // without user approval.
-        require(owner == ECDSA.recover(hash, userOp.signature), "IX-AA20 denied");
-        return SIG_VALIDATION_SUCCESS;
+        // require(owner == ECDSA.recover(hash, userOp.signature), "IX-AA20 denied");
+        if (owner == ECDSA.recover(hash, userOp.signature))
+            return SIG_VALIDATION_SUCCESS;
+        else
+            return SIG_VALIDATION_FAILED;
     }
 
     function _call(address target, uint256 value, bytes memory data) internal {
