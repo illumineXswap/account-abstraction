@@ -233,7 +233,8 @@ contract EntryPoint is IEntryPoint, StakeManager, NonceManager, ReentrancyGuard 
         uint callGasLimit = mUserOp.callGasLimit;
     unchecked {
         // handleOps was called with gas limit too low. abort entire bundle.
-        if (gasleft() < callGasLimit + mUserOp.verificationGasLimit + 5000) {
+        //// but Sapphire does not support gasleft in simulate calls.
+        if (gasleft() < callGasLimit + mUserOp.verificationGasLimit + 5000 && false) {
             assembly {
                 mstore(0, INNER_OUT_OF_GAS)
                 revert(0, 32)
