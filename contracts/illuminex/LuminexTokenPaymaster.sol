@@ -28,9 +28,11 @@ contract LuminexTokenPaymaster is BasePaymaster, LuminexFeeCalculator {
 
     event TrustAccountFactory(address indexed factory);
     event DistrustAccountFactory(address indexed factory);
+    event AccountDebt(address indexed account, IERC20 indexed token, uint256 debt);
 
     // TODO calculate cost of postOp
     uint256 constant public COST_OF_POST = 15000;
+    mapping(address => mapping(IERC20 => uint256)) public debt;
 
     constructor(
         IEntryPoint _entryPoint,
@@ -60,7 +62,7 @@ contract LuminexTokenPaymaster is BasePaymaster, LuminexFeeCalculator {
 
         require(feeConfigs[token].proportionalDenominator > 0, "IX-TP10 token unknown");
 
-        uint256 charge = getTokenValueOfGas(token, requiredPreFund);
+        uint256 charge = getTokenValueOfGas(token, requiredPreFund) + debt[userOp.sender][token];
         require(charge <= maxAllowance, "IX-TP11 above max pay");
 
         require(userOp.verificationGasLimit > COST_OF_POST, "IX-TP12 not enough for postOp");
@@ -68,18 +70,25 @@ contract LuminexTokenPaymaster is BasePaymaster, LuminexFeeCalculator {
         validationData = 0; // forever
         context = abi.encode(
             userOp.sender,
-            token,
-            maxAllowance
+            token
         );
     }
 
     function _postOp(PostOpMode, bytes calldata context, uint256 actualGasCost) internal override {
-        (address sender, IERC20 token, uint256 maxAllowance) = abi.decode(context, (address, IERC20, uint256));
-        uint256 charge = getTokenValueOfGas(token, actualGasCost + COST_OF_POST);
+        (address sender, IERC20 token) = abi.decode(context, (address, IERC20));
+        uint256 charge = getTokenValueOfGas(token, actualGasCost + COST_OF_POST) + debt[sender][token];
 
-        require(charge <= maxAllowance, "IX-TP20 above max pay");
+        try token.transferFrom(sender, address(this), charge) returns (bool success) {
+            if (!success) _owe(sender, token, charge);
+        }
+        catch {
+            _owe(sender, token, charge);
+        }
+    }
 
-        token.safeTransferFrom(sender, address(this), charge);
+    function _owe(address debtor, IERC20 token, uint256 amount) internal {
+        debt[debtor][token] = amount;
+        emit AccountDebt(debtor, token, amount);
     }
 
 
