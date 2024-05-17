@@ -16,12 +16,17 @@ const deploySimpleAccountFactory: DeployFunction = async function (hre: HardhatR
       deterministicDeployment: true
     })
 
-  // const paymaster = await ethers.getContractAt('LuminexTokenPaymaster', paymasterDeployed.address)
+  const entryPoint = await ethers.getContractAt('EntryPoint', entrypointDeployment.address)
 
-  // if (!await paymaster.trustedAccountFactories(entrypoint.address)) {
-  //   await paymaster.trustAccountFactory(entrypoint.address)
-  //   console.log('Trusted account factory set', entrypoint.address)
-  // }
+  const targetDeposit = 2n * 10n ** 18n
+  const currentDeposit = (await entryPoint.balanceOf(paymasterDeployed.address)).toBigInt()
+  if (currentDeposit < targetDeposit) {
+    const a = await entryPoint.depositTo(paymasterDeployed.address, {
+      value: targetDeposit - currentDeposit
+    })
+    await a.wait()
+    console.log(`  Deposited ${targetDeposit - currentDeposit} for paymaster`)
+  }
 }
 
 export default deploySimpleAccountFactory
