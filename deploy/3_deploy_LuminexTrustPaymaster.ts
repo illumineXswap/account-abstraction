@@ -6,11 +6,11 @@ const deploySimpleAccountFactory: DeployFunction = async function (hre: HardhatR
   const provider = ethers.provider
   const from = await provider.getSigner().getAddress()
 
-  const entrypoint = await hre.deployments.get('EntryPoint')
-  await hre.deployments.deploy(
+  const entrypointDeployment = await hre.deployments.get('EntryPoint')
+  const paymasterDeployed = await hre.deployments.deploy(
     'LuminexTokenPaymaster', {
       from,
-      args: [entrypoint.address],
+      args: [entrypointDeployment.address, from],
       gasLimit: 6e6,
       log: true,
       deterministicDeployment: true

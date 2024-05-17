@@ -33,8 +33,11 @@ contract LuminexTokenPaymaster is BasePaymaster, LuminexFeeCalculator {
     uint256 constant public COST_OF_POST = 15000;
 
     constructor(
-        IEntryPoint _entryPoint
-    ) BasePaymaster(_entryPoint) {}
+        IEntryPoint _entryPoint,
+        address _owner
+    ) BasePaymaster(_entryPoint) {
+        _transferOwnership(_owner);
+    }
 
     /**
      * verify our external signer signed this request.
