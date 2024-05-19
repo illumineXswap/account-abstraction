@@ -40,6 +40,11 @@ contract EntryPoint is IEntryPoint, StakeManager, NonceManager, ReentrancyGuard 
     uint256 public constant SIG_VALIDATION_FAILED = 1;
 
     /**
+     * for read only purposes
+     */
+    bytes32 public constant IX_READ_SIGNATURE_NS = keccak256("IX:simulateReadOp");
+
+    /**
      * compensate the caller's beneficiary address with the collected fees of all UserOperations.
      * @param beneficiary the address to receive the fees
      * @param amount amount to transfer.
@@ -321,6 +326,36 @@ contract EntryPoint is IEntryPoint, StakeManager, NonceManager, ReentrancyGuard 
         }
         revert ValidationResult(returnInfo, senderInfo, factoryInfo, paymasterInfo);
 
+    }
+
+    function simulateReadOp(UserOperation calldata op) external {
+        UserOpInfo memory opInfo;
+        MemoryUserOp memory mUserOp = opInfo.mUserOp;
+        _copyUserOpToMemory(op, mUserOp);
+
+        // We use augmented hash so that signature is invalid for handleOps
+        opInfo.userOpHash = keccak256(abi.encodePacked(
+            getUserOpHash(op),
+            IX_READ_SIGNATURE_NS
+        ));
+
+        _simulationOnlyValidations(op);
+        (uint256 validationData, uint256 paymasterValidationData) = _validatePrepayment(0, op, opInfo);
+        ValidationData memory data = _intersectTimeRange(validationData, paymasterValidationData);
+
+        require(
+            block.timestamp >= data.validAfter &&
+            block.timestamp <= data.validUntil,
+            "IX-EP10 Signature expired"
+        );
+        require(data.aggregator == address(0), "IX-EP11 Invalid signature");
+        require(op.callData.length > 0, "IX-EP12 Call data is required");
+
+        numberMarker();
+        (bool success, bytes memory result) = mUserOp.sender.call{gas: op.callGasLimit}(op.callData);
+        numberMarker();
+
+        revert ExecutionResult(0, 0, data.validAfter, data.validUntil, success, result);
     }
 
     function _getRequiredPrefund(MemoryUserOp memory mUserOp) internal pure returns (uint256 requiredPrefund) {

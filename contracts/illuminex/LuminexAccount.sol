@@ -156,6 +156,16 @@ contract LuminexAccount is BaseAccount, UUPSUpgradeable, Initializable {
         }
     }
 
+    function callAndReturn(address target, uint256 value, bytes memory data) external onlyTrusted() returns (bytes memory) {
+        (bool success, bytes memory result) = target.call{value: value}(data);
+        if (!success) {
+            assembly {
+                revert(add(result, 32), mload(result))
+            }
+        }
+        return result;
+    }
+
     /**
      * check current account deposit in the entryPoint
      */
