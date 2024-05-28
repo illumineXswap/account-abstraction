@@ -102,7 +102,7 @@ contract EntryPoint is IEntryPoint, StakeManager, NonceManager, ReentrancyGuard 
     unchecked {
         for (uint256 i = 0; i < opslen; i++) {
             UserOpInfo memory opInfo = opInfos[i];
-            (uint256 validationData, uint256 pmValidationData) = _validatePrepayment(i, ops[i], opInfo);
+            (uint256 validationData, uint256 pmValidationData) = _validatePrepayment(i, ops[i], opInfo, false);
             _validateAccountAndPaymasterValidationData(i, validationData, pmValidationData, address(0));
         }
 
@@ -161,7 +161,7 @@ contract EntryPoint is IEntryPoint, StakeManager, NonceManager, ReentrancyGuard 
             uint256 opslen = ops.length;
             for (uint256 i = 0; i < opslen; i++) {
                 UserOpInfo memory opInfo = opInfos[opIndex];
-                (uint256 validationData, uint256 paymasterValidationData) = _validatePrepayment(opIndex, ops[i], opInfo);
+                (uint256 validationData, uint256 paymasterValidationData) = _validatePrepayment(opIndex, ops[i], opInfo, false);
                 _validateAccountAndPaymasterValidationData(i, validationData, paymasterValidationData, address(aggregator));
                 opIndex++;
             }
@@ -190,7 +190,7 @@ contract EntryPoint is IEntryPoint, StakeManager, NonceManager, ReentrancyGuard 
 
         UserOpInfo memory opInfo;
         _simulationOnlyValidations(op);
-        (uint256 validationData, uint256 paymasterValidationData) = _validatePrepayment(0, op, opInfo);
+        (uint256 validationData, uint256 paymasterValidationData) = _validatePrepayment(0, op, opInfo, false);
         ValidationData memory data = _intersectTimeRange(validationData, paymasterValidationData);
 
         numberMarker();
@@ -304,7 +304,7 @@ contract EntryPoint is IEntryPoint, StakeManager, NonceManager, ReentrancyGuard 
         UserOpInfo memory outOpInfo;
 
         _simulationOnlyValidations(userOp);
-        (uint256 validationData, uint256 paymasterValidationData) = _validatePrepayment(0, userOp, outOpInfo);
+        (uint256 validationData, uint256 paymasterValidationData) = _validatePrepayment(0, userOp, outOpInfo, false);
         StakeInfo memory paymasterInfo = _getStakeInfo(outOpInfo.mUserOp.paymaster);
         StakeInfo memory senderInfo = _getStakeInfo(outOpInfo.mUserOp.sender);
         StakeInfo memory factoryInfo;
@@ -340,22 +340,23 @@ contract EntryPoint is IEntryPoint, StakeManager, NonceManager, ReentrancyGuard 
         ));
 
         _simulationOnlyValidations(op);
-        (uint256 validationData, uint256 paymasterValidationData) = _validatePrepayment(0, op, opInfo);
-        ValidationData memory data = _intersectTimeRange(validationData, paymasterValidationData);
+        _incrementDeposit(op.sender, type(uint112).max);
+        (uint256 validationData, uint256 paymasterValidationData) = _validatePrepayment(0, op, opInfo, true);
+        ValidationData memory validity = _intersectTimeRange(validationData, paymasterValidationData);
 
         require(
-            block.timestamp >= data.validAfter &&
-            block.timestamp <= data.validUntil,
+            block.timestamp >= validity.validAfter &&
+            block.timestamp <= validity.validUntil,
             "IX-EP10 Signature expired"
         );
-        require(data.aggregator == address(0), "IX-EP11 Invalid signature");
+        require(validity.aggregator == address(0), "IX-EP11 Invalid signature");
         require(op.callData.length > 0, "IX-EP12 Call data is required");
 
         numberMarker();
         (bool success, bytes memory result) = mUserOp.sender.call{gas: op.callGasLimit}(op.callData);
         numberMarker();
 
-        revert ExecutionResult(0, 0, data.validAfter, data.validUntil, success, result);
+        revert ExecutionResult(0, 0, validity.validAfter, validity.validUntil, success, result);
     }
 
     function _getRequiredPrefund(MemoryUserOp memory mUserOp) internal pure returns (uint256 requiredPrefund) {
@@ -536,13 +537,16 @@ contract EntryPoint is IEntryPoint, StakeManager, NonceManager, ReentrancyGuard 
      * @param opIndex the index of this userOp into the "opInfos" array
      * @param userOp the userOp to validate
      */
-    function _validatePrepayment(uint256 opIndex, UserOperation calldata userOp, UserOpInfo memory outOpInfo)
+    function _validatePrepayment(uint256 opIndex, UserOperation calldata userOp, UserOpInfo memory outOpInfo, bool _skipHash)
     private returns (uint256 validationData, uint256 paymasterValidationData) {
 
         uint256 preGas = gasleft();
         MemoryUserOp memory mUserOp = outOpInfo.mUserOp;
         _copyUserOpToMemory(userOp, mUserOp);
-        outOpInfo.userOpHash = getUserOpHash(userOp);
+
+        if (!_skipHash) {
+            outOpInfo.userOpHash = getUserOpHash(userOp);
+        }
 
         // validate all numeric values in userOp are well below 128 bit, so they can safely be added
         // and multiplied without causing overflow
