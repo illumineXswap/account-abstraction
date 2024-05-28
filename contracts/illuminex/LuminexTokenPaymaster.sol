@@ -74,15 +74,16 @@ contract LuminexTokenPaymaster is BasePaymaster, LuminexFeeCalculator {
         );
     }
 
-    function _postOp(PostOpMode, bytes calldata context, uint256 actualGasCost) internal override {
+    function _postOp(PostOpMode opMode, bytes calldata context, uint256 actualGasCost) internal override {
         (address sender, IERC20 token) = abi.decode(context, (address, IERC20));
-        uint256 charge = getTokenValueOfGas(token, actualGasCost + COST_OF_POST) + debt[sender][token];
+        uint256 _debt = debt[sender][token];
+        uint256 charge = getTokenValueOfGas(token, actualGasCost + COST_OF_POST) + _debt;
 
-        try token.transferFrom(sender, address(this), charge) returns (bool success) {
-            if (!success) _owe(sender, token, charge);
-        }
-        catch {
+        if (opMode == PostOpMode.postOpReverted){
             _owe(sender, token, charge);
+        } else {
+            token.safeTransferFrom(sender, address(this), charge);
+            _owe(sender, token, 0);
         }
     }
 
