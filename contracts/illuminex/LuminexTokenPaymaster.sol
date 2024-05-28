@@ -92,6 +92,11 @@ contract LuminexTokenPaymaster is BasePaymaster, LuminexFeeCalculator {
         emit AccountDebt(debtor, token, amount);
     }
 
+    function payDebt(address debtor, IERC20 token) public {
+        uint256 _debt = debt[debtor][token];
+        token.safeTransferFrom(_msgSender(), address(this), _debt);
+        _owe(debtor, token, 0);
+    }
 
     function skim(address payable to) public onlyOwner {
         to.transfer(address(this).balance);
