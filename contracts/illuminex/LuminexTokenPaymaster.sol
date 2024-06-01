@@ -10,7 +10,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../core/BasePaymaster.sol";
 import "../core/Helpers.sol";
 import "../interfaces/IAccountFactory.sol";
-import "./LuminexFeeCalculator.sol";
+import "./LuminexNativeExchange.sol";
 
 /**
  * A sample paymaster that uses external service to decide whether to pay for the UserOp.
@@ -21,13 +21,11 @@ import "./LuminexFeeCalculator.sol";
  * - the paymaster checks a signature to agree to PAY for GAS.
  * - the account checks a signature to prove identity and account ownership.
  */
-contract LuminexTokenPaymaster is BasePaymaster, LuminexFeeCalculator {
+contract LuminexTokenPaymaster is BasePaymaster, LuminexNativeExchange {
     using SafeERC20 for IERC20;
 
     using UserOperationLib for UserOperation;
 
-    event TrustAccountFactory(address indexed factory);
-    event DistrustAccountFactory(address indexed factory);
     event AccountDebt(address indexed account, IERC20 indexed token, uint256 debt);
 
     // TODO calculate cost of postOp
@@ -36,17 +34,19 @@ contract LuminexTokenPaymaster is BasePaymaster, LuminexFeeCalculator {
 
     constructor(
         IEntryPoint _entryPoint,
-        address _owner
-    ) BasePaymaster(_entryPoint) {
-        _transferOwnership(_owner);
+        address _owner,
+        IERC20 _wrappedNative
+    )
+    BasePaymaster(_entryPoint)
+    LuminexNativeExchange(_owner, _wrappedNative)
+    {
     }
 
     /**
      * verify our external signer signed this request.
      * the "paymasterAndData" is expected to be the paymaster and a signature over the entire request params
      * paymasterAndData[:20] : address(this)
-     * paymasterAndData[20:84] : abi.encode(validUntil, validAfter)
-     * paymasterAndData[84:] : signature
+     * paymasterAndData[20:] : abi.encode(tokenAddress, maxAllowance)
      */
     function _validatePaymasterUserOp(
         UserOperation calldata userOp,
@@ -60,9 +60,7 @@ contract LuminexTokenPaymaster is BasePaymaster, LuminexFeeCalculator {
     {
         (IERC20 token, uint256 maxAllowance) = abi.decode(userOp.paymasterAndData[20 :], (IERC20, uint256));
 
-        require(feeConfigs[token].proportionalDenominator > 0, "IX-TP10 token unknown");
-
-        uint256 charge = getTokenValueOfGas(token, requiredPreFund) + debt[userOp.sender][token];
+        uint256 charge = tokensRequiredForNative(token, requiredPreFund) + debt[userOp.sender][token];
         require(charge <= maxAllowance, "IX-TP11 above max pay");
 
         require(userOp.verificationGasLimit > COST_OF_POST, "IX-TP12 not enough for postOp");
@@ -77,9 +75,9 @@ contract LuminexTokenPaymaster is BasePaymaster, LuminexFeeCalculator {
     function _postOp(PostOpMode opMode, bytes calldata context, uint256 actualGasCost) internal override {
         (address sender, IERC20 token) = abi.decode(context, (address, IERC20));
         uint256 _debt = debt[sender][token];
-        uint256 charge = getTokenValueOfGas(token, actualGasCost + COST_OF_POST) + _debt;
+        uint256 charge = tokensRequiredForNative(token, actualGasCost + COST_OF_POST) + _debt;
 
-        if (opMode == PostOpMode.postOpReverted){
+        if (opMode == PostOpMode.postOpReverted) {
             _owe(sender, token, charge);
         } else {
             token.safeTransferFrom(sender, address(this), charge);
