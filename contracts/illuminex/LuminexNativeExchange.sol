@@ -19,15 +19,19 @@ contract LuminexNativeExchange is Ownable {
     event BeneficiarySet(address beneficiary);
 
 
-    constructor(address _owner, address _beneficiary, IERC20 _native) {
+    constructor(address _owner, IERC20 _native) {
         _transferOwnership(_owner);
-        setBeneficiary(_beneficiary);
+        _setBeneficiary(_owner);
         WRAPPED_NATIVE = _native;
     }
 
-    function setBeneficiary(address newBeneficiary) public onlyOwner {
+    function _setBeneficiary(address newBeneficiary) internal {
         beneficiary = newBeneficiary;
         emit BeneficiarySet(newBeneficiary);
+    }
+
+    function setBeneficiary(address newBeneficiary) public onlyOwner {
+        _setBeneficiary(newBeneficiary);
     }
 
     function setOracle(IERC20 token, LuminexOracle oracle) public onlyOwner {
