@@ -10,7 +10,6 @@ import "../interfaces/ISealedEncryptor.sol";
 
 import "./LuminexAccount.sol";
 import "./RotatingKeys.sol";
-import "./LuminexFeeCalculator.sol";
 
 /* solhint-disable avoid-low-level-calls */
 
