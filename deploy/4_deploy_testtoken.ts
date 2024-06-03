@@ -27,6 +27,10 @@ const deploySimpleAccountFactory: DeployFunction = async function (hre: HardhatR
   /// ////////////////////////////
 
   const tokensToSetOracles = [tokenDeploy.address, secondTokenDeploy.address]
+  const prices = new Map<string, [nativeReceived: bigint, tokenCost: bigint]>([
+    [tokenDeploy.address, [100n, 123n]],
+    [secondTokenDeploy.address, [123n, 100n]]
+  ])
 
   const chainId = hre.network.config.chainId
   assert(typeof chainId === 'number', 'ChainId must be a number')
@@ -48,6 +52,20 @@ const deploySimpleAccountFactory: DeployFunction = async function (hre: HardhatR
         log: true,
         deterministicDeployment: true
       })
+
+    const oracle = await ethers.getContractAt('LuminexOracleConst', oracleResult.address)
+
+    const price = prices.get(tokenAddress)
+    const val = await Promise.all([oracle.token0Value(), oracle.token1Value()])
+    if ((price != null) && (price[0] !== val[0].toBigInt() || price[1] !== val[1].toBigInt())) {
+      const tx = await oracle.setValues(price[0], price[1])
+      txs.push(tx.wait().then(() => {
+        console.log(`  Oracle (${oracle.address}) price set [${price.join()}]`)
+      }).catch(e => {
+        console.log({ tokenAddress: tokenAddress, oracleAddress: oracleResult.address, price })
+        throw e
+      }))
+    }
 
     if (await paymaster.oracles(tokenAddress) === oracleResult.address) {
       continue
