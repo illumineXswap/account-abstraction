@@ -8,28 +8,29 @@ const deploySimpleAccountFactory: DeployFunction = async function (hre: HardhatR
   const provider = ethers.provider
   const from = await provider.getSigner().getAddress()
 
-  const tokenDeploy = await hre.deployments.deploy(
-    'TestToken', {
-      from,
-      gasLimit: 6e6,
-      log: true,
-      deterministicDeployment: true
-    })
-
-  const secondTokenDeploy = await hre.deployments.deploy(
-    'TestToken', {
-      from,
-      gasLimit: 6e6,
-      log: true,
-      deterministicDeployment: '0xbeef'
-    })
+  // const tokenDeploy = await hre.deployments.deploy(
+  //   'TestToken', {
+  //     from,
+  //     gasLimit: 6e6,
+  //     log: true,
+  //     deterministicDeployment: true
+  //   })
+  //
+  // const secondTokenDeploy = await hre.deployments.deploy(
+  //   'TestToken', {
+  //     from,
+  //     gasLimit: 6e6,
+  //     log: true,
+  //     deterministicDeployment: '0xbeef'
+  //   })
 
   /// ////////////////////////////
 
-  const tokensToSetOracles = [tokenDeploy.address, secondTokenDeploy.address]
+  const pMATIC = '0x1c4d39340e4c16f1F6E18891B927332604894231'
+
+  const tokensToSetOracles = [pMATIC]
   const prices = new Map<string, [nativeReceived: bigint, tokenCost: bigint]>([
-    [tokenDeploy.address, [100n, 123n]],
-    [secondTokenDeploy.address, [123n, 100n]]
+    [pMATIC, [618455n, 100000n]]
   ])
 
   const chainId = hre.network.config.chainId
@@ -82,12 +83,6 @@ const deploySimpleAccountFactory: DeployFunction = async function (hre: HardhatR
       console.error(result.reason)
     }
   }
-
-  // console.log(await paymaster.feeConfigs(token.address))
-
-  // await token.mint('0x95025C01BaA559A9c293673e006628Be31C22C94', 10_000_000)
-  // await token.mint('0xF450fd80f8b8D37aB4f2d5f4b4F32a64500872F7', 10_000n * 10n ** 18n)
-  // await token.mint('0x0E0271498d31F20d02D6fc8D8074058F1C7F9Aee', 10_000n * 10n ** 18n)
 }
 
 export default deploySimpleAccountFactory

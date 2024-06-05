@@ -16,11 +16,11 @@ const deployLuminexAccountFactory: DeployFunction = async function (hre: Hardhat
       deterministicDeployment: true
     })
 
-  await hre.deployments.deploy('TestCounter', {
-    from,
-    log: true,
-    deterministicDeployment: true
-  })
+  // await hre.deployments.deploy('TestCounter', {
+  //   from,
+  //   log: true,
+  //   deterministicDeployment: true
+  // })
 }
 
 export default deployLuminexAccountFactory
