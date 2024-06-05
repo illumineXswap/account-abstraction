@@ -49,13 +49,7 @@ contract LuminexNativeExchange is Ownable {
         uint256 nativeValue = oracle.token0WorthOfToken1(tokenValue);
         require(nativeValue >= minNative, "IX-EX12 Native price too high");
 
-        {
-            uint256 prevBalance = _token.balanceOf(beneficiary);
-            _token.safeTransferFrom(_msgSender(), beneficiary, tokenValue);
-            uint256 curBalance = _token.balanceOf(beneficiary);
-            require(curBalance - prevBalance >= tokenValue, "IX-EX13 Token not sent fully");
-        }
-
+        _token.safeTransferFrom(_msgSender(), beneficiary, tokenValue);
 
         (bool sent,) = receiver.call{value: nativeValue}("");
         require(sent, "IX-EX14 Failed to send");
