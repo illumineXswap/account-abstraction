@@ -77,12 +77,13 @@ contract LuminexTokenPaymaster is BasePaymaster, LuminexNativeExchange {
         uint256 _debt = debt[sender][token];
         uint256 charge = tokensRequiredForNative(token, actualGasCost + COST_OF_POST) + _debt;
 
-        if (opMode == PostOpMode.postOpReverted) {
-            _owe(sender, token, charge);
-        } else {
-            token.safeTransferFrom(sender, address(this), charge);
-            _owe(sender, token, 0);
+        if (opMode != PostOpMode.postOpReverted) {
+            try token.transferFrom(sender, address(this), charge) returns (bool success) {
+                if (success)
+                    charge = 0;
+            } catch {}
         }
+        _owe(sender, token, charge);
     }
 
     function _owe(address debtor, IERC20 token, uint256 amount) internal {
