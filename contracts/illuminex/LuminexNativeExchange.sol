@@ -18,12 +18,13 @@ contract LuminexNativeExchange is Ownable {
     event OracleSet(IERC20 indexed token, LuminexOracle oracle);
     event BeneficiarySet(address beneficiary);
 
-
     constructor(address _owner, IERC20 _native) {
         _transferOwnership(_owner);
         _setBeneficiary(_owner);
         WRAPPED_NATIVE = _native;
     }
+
+    receive() external payable {}
 
     function _setBeneficiary(address newBeneficiary) internal {
         beneficiary = newBeneficiary;
