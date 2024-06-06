@@ -10,7 +10,7 @@ const deployLuminexAccountFactory: DeployFunction = async function (hre: Hardhat
   await hre.deployments.deploy(
     'LuminexAccountFactory', {
       from,
-      args: [entrypoint.address],
+      args: [from, entrypoint.address],
       gasLimit: 6e6,
       log: true,
       deterministicDeployment: true

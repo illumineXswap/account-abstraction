@@ -29,11 +29,11 @@ contract LuminexAccountFactory is IAccountFactory, ISealedEncryptor, RotatingKey
 
     LuminexAccountComplianceManager public immutable complianceManager;
 
-    constructor(IEntryPoint _entryPoint)
+    constructor(address owner, IEntryPoint _entryPoint)
     RotatingKeys(keccak256(abi.encodePacked(block.number)), type(LuminexAccountFactory).name)
     {
-        complianceManager = new LuminexAccountComplianceManager(address(this));
-        complianceManager.transferOwnership(msg.sender);
+        complianceManager = new LuminexAccountComplianceManager(this);
+        complianceManager.transferOwnership(owner);
 
         accountImplementation = new LuminexAccount(_entryPoint, this, complianceManager);
     }
@@ -79,22 +79,6 @@ contract LuminexAccountFactory is IAccountFactory, ISealedEncryptor, RotatingKey
             )
         )));
     }
-
-    /**
-     * returns call result
-     */
-    function simulateCall(
-        address _accountOwner,
-        bytes32 _salt,
-        bytes calldata _call
-    ) public returns (bool success, bytes memory result) {
-        LuminexAccount _contract = createAccount(
-            _accountOwner,
-            _salt
-        );
-        (success, result) = address(_contract).call(_call);
-    }
-
 
     function encryptFor(address _receiver, bytes memory _payload) public view returns (bytes memory encrypted) {
         (bytes memory _encrypted, uint256 _keyIndex) = _encryptPayload(_payload);

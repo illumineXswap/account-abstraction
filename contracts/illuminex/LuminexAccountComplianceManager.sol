@@ -37,8 +37,8 @@ contract LuminexAccountComplianceManager is Ownable, ILuminexComplianceManager {
         _;
     }
 
-    constructor(address _accountsFactory) {
-        accountsFactory = IAccountFactory(_accountsFactory);
+    constructor(IAccountFactory _accountsFactory) {
+        accountsFactory = _accountsFactory;
     }
 
     function setComplianceManager(address _newManager) public onlyOwner {
