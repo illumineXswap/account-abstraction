@@ -26,7 +26,7 @@ contract LuminexTokenPaymaster is BasePaymaster, LuminexNativeExchange {
 
     using UserOperationLib for UserOperation;
 
-    event AccountDebt(address indexed account, IERC20 indexed token, uint256 debt);
+    event AccountDebt(IERC20 indexed token, uint256 debt);
 
     // TODO calculate cost of postOp
     uint256 constant public COST_OF_POST = 15000;
@@ -87,7 +87,7 @@ contract LuminexTokenPaymaster is BasePaymaster, LuminexNativeExchange {
 
     function _owe(address debtor, IERC20 token, uint256 amount) internal {
         debt[debtor][token] = amount;
-        emit AccountDebt(debtor, token, amount);
+        emit AccountDebt(token, amount);
     }
 
     function payDebt(address debtor, IERC20 token) public {
