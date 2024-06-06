@@ -52,6 +52,13 @@ contract LuminexAccountFactory is IAccountFactory, ISealedEncryptor, RotatingKey
         ret = LuminexAccount(payable(_proxy));
 
         _deployedAccounts[address(_proxy)] = true;
+
+        _updateRingKey(keccak256(abi.encodePacked(
+            block.number,
+            accountOwner,
+            salt,
+            address(_proxy)
+        )));
     }
 
     /**
