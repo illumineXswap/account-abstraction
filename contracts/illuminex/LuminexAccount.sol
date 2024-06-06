@@ -14,6 +14,7 @@ import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import "../core/BaseAccount.sol";
 import "../core/Helpers.sol";
 import "../interfaces/ISealedEncryptor.sol";
+import "../interfaces/ILuminexComplianceManager.sol";
 
 /**
   * minimal account.
@@ -31,6 +32,7 @@ contract LuminexAccount is BaseAccount, UUPSUpgradeable, Initializable {
 
     IEntryPoint private immutable _entryPoint;
     ISealedEncryptor private immutable _encryption;
+    ILuminexComplianceManager private immutable _complianceManager;
 
     event SimpleAccountInitialized(IEntryPoint indexed entryPoint, address indexed owner);
 
@@ -47,9 +49,10 @@ contract LuminexAccount is BaseAccount, UUPSUpgradeable, Initializable {
     // solhint-disable-next-line no-empty-blocks
     receive() external payable {}
 
-    constructor(IEntryPoint anEntryPoint, ISealedEncryptor anEncryptor) {
+    constructor(IEntryPoint anEntryPoint, ISealedEncryptor anEncryptor, ILuminexComplianceManager aComplianceManager) {
         _entryPoint = anEntryPoint;
         _encryption = anEncryptor;
+        _complianceManager = aComplianceManager;
         _disableInitializers();
     }
 
@@ -154,6 +157,8 @@ contract LuminexAccount is BaseAccount, UUPSUpgradeable, Initializable {
                 revert(add(result, 32), mload(result))
             }
         }
+
+        _complianceManager.record(target, value, data);
     }
 
     function callAndReturn(address target, uint256 value, bytes memory data) external onlyTrusted() returns (bytes memory) {
