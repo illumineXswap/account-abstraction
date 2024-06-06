@@ -28,7 +28,7 @@ contract LuminexAccountComplianceManager is Ownable, ILuminexComplianceManager {
     event Reveal(address indexed sender, uint256 recordsCount);
 
     modifier onlyAccount() {
-        require(accountsFactory.deployedAccounts(msg.sender), "Not a smart account");
+        require(accountsFactory.deployedAccounts(msg.sender), "IX-CM20 Not a registered account");
         _;
     }
 
@@ -67,11 +67,11 @@ contract LuminexAccountComplianceManager is Ownable, ILuminexComplianceManager {
     }
 
     function reveal(address sender, uint256 recordsCount) public onlyComplianceManager {
-        require(_revealedEntriesByAddress[sender].length + recordsCount <= _recordsIdsBySender[sender].length, "Too much");
+        uint _revealedCount = _revealedEntriesByAddress[sender].length;
+        require(_revealedCount + recordsCount <= _recordsIdsBySender[sender].length, "IX-CM10 To broad reveal");
         emit Reveal(sender, recordsCount);
 
-        uint256 _len = _revealedEntriesByAddress[sender].length;
-        for (uint i = _len; i < _len + recordsCount; i++) {
+        for (uint i = _revealedCount; i < _revealedCount + recordsCount; i++) {
             _revealedEntriesByAddress[sender].push(_recordsIdsBySender[sender][i]);
         }
     }
