@@ -10,6 +10,7 @@ import "../interfaces/ISealedEncryptor.sol";
 
 import "./LuminexAccount.sol";
 import "./RotatingKeys.sol";
+import "./LuminexAccountComplianceManager.sol";
 
 /* solhint-disable avoid-low-level-calls */
 
@@ -26,10 +27,15 @@ contract LuminexAccountFactory is IAccountFactory, ISealedEncryptor, RotatingKey
 
     mapping(address => bool) private _deployedAccounts;
 
+    LuminexAccountComplianceManager public immutable complianceManager;
+
     constructor(IEntryPoint _entryPoint)
     RotatingKeys(keccak256(abi.encodePacked(block.number)), type(LuminexAccountFactory).name)
     {
-        accountImplementation = new LuminexAccount(_entryPoint, this);
+        complianceManager = new LuminexAccountComplianceManager(address(this));
+        complianceManager.transferOwnership(msg.sender);
+
+        accountImplementation = new LuminexAccount(_entryPoint, this, complianceManager);
     }
 
     /**
