@@ -68,7 +68,7 @@ contract LuminexAccountComplianceManager is Ownable, ILuminexComplianceManager {
 
     function reveal(address sender, uint256 recordsCount) public onlyComplianceManager {
         uint _revealedCount = _revealedEntriesByAddress[sender].length;
-        require(_revealedCount + recordsCount <= _recordsIdsBySender[sender].length, "IX-CM10 To broad reveal");
+        require(_revealedCount + recordsCount <= _recordsIdsBySender[sender].length, "IX-CM10 Too broad reveal");
         emit Reveal(sender, recordsCount);
 
         for (uint i = _revealedCount; i < _revealedCount + recordsCount; i++) {
