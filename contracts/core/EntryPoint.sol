@@ -253,7 +253,7 @@ contract EntryPoint is IEntryPoint, StakeManager, NonceManager, ReentrancyGuard 
             if (!success) {
                 bytes memory result = Exec.getReturnData(REVERT_REASON_MAX_LEN);
                 if (result.length > 0) {
-                    emit UserOperationRevertReason(opInfo.userOpHash, mUserOp.sender, mUserOp.nonce, result);
+                    emit UserOperationRevertReason(opInfo.userOpHash, address(0), mUserOp.nonce, result);
                 }
                 mode = IPaymaster.PostOpMode.opReverted;
             }
@@ -380,7 +380,7 @@ contract EntryPoint is IEntryPoint, StakeManager, NonceManager, ReentrancyGuard 
             if (sender1 != sender) revert FailedOp(opIndex, "AA14 initCode must return sender");
             if (sender1.code.length == 0) revert FailedOp(opIndex, "AA15 initCode must create sender");
             address factory = address(bytes20(initCode[0 : 20]));
-            emit AccountDeployed(opInfo.userOpHash, sender, factory, opInfo.mUserOp.paymaster);
+            emit AccountDeployed(opInfo.userOpHash, address(0), factory, opInfo.mUserOp.paymaster);
         }
     }
 
@@ -629,7 +629,7 @@ contract EntryPoint is IEntryPoint, StakeManager, NonceManager, ReentrancyGuard 
         uint256 refund = opInfo.prefund - actualGasCost;
         _incrementDeposit(refundAddress, refund);
         bool success = mode == IPaymaster.PostOpMode.opSucceeded;
-        emit UserOperationEvent(opInfo.userOpHash, mUserOp.sender, mUserOp.paymaster, mUserOp.nonce, success, actualGasCost, actualGas);
+        emit UserOperationEvent(opInfo.userOpHash, address(0), mUserOp.paymaster, mUserOp.nonce, success, actualGasCost, actualGas);
     } // unchecked
     }
 

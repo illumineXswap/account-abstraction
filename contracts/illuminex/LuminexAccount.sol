@@ -8,13 +8,13 @@ pragma solidity ^0.8.23;
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
-import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 import "../core/BaseAccount.sol";
 import "../core/Helpers.sol";
 import "../interfaces/ISealedEncryptor.sol";
 import "../interfaces/ILuminexComplianceManager.sol";
+import "../utils/Initializable.sol";
+import "../utils/UUPSUpgradeable.sol";
 
 /**
   * minimal account.
@@ -115,8 +115,6 @@ contract LuminexAccount is BaseAccount, UUPSUpgradeable, Initializable {
 
     function _initialize(address anOwner) internal virtual {
         owner = anOwner;
-
-        emit SimpleAccountInitialized(_entryPoint, owner);
     }
 
     modifier onlyTrusted() {
