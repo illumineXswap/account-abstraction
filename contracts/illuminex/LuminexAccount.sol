@@ -15,6 +15,7 @@ import "../interfaces/ISealedEncryptor.sol";
 import "../interfaces/ILuminexComplianceManager.sol";
 import "../utils/Initializable.sol";
 import "../utils/UUPSUpgradeable.sol";
+import "./LuminexAccountFactory.sol";
 
 /**
   * minimal account.
@@ -31,7 +32,7 @@ contract LuminexAccount is BaseAccount, UUPSUpgradeable, Initializable {
     using ECDSA for bytes32;
 
     IEntryPoint private immutable _entryPoint;
-    ISealedEncryptor private immutable _encryption;
+    LuminexAccountFactory private immutable _factory;
     ILuminexComplianceManager private immutable _complianceManager;
 
     event SimpleAccountInitialized(IEntryPoint indexed entryPoint, address indexed owner);
@@ -49,9 +50,9 @@ contract LuminexAccount is BaseAccount, UUPSUpgradeable, Initializable {
     // solhint-disable-next-line no-empty-blocks
     receive() external payable {}
 
-    constructor(IEntryPoint anEntryPoint, ISealedEncryptor anEncryptor, ILuminexComplianceManager aComplianceManager) {
+    constructor(IEntryPoint anEntryPoint, LuminexAccountFactory aFactory, ILuminexComplianceManager aComplianceManager) {
         _entryPoint = anEntryPoint;
-        _encryption = anEncryptor;
+        _factory = aFactory;
         _complianceManager = aComplianceManager;
         _disableInitializers();
     }
@@ -77,7 +78,7 @@ contract LuminexAccount is BaseAccount, UUPSUpgradeable, Initializable {
      */
     function executeEncrypted(bytes calldata encryptedCall) external onlyTrusted {
         (address dest, uint256 value, bytes memory func) = abi.decode(
-            _encryption.decryptForMe(encryptedCall),
+            _factory.decryptForMe(encryptedCall),
             (address, uint256, bytes)
         );
         _call(dest, value, func);
@@ -138,10 +139,6 @@ contract LuminexAccount is BaseAccount, UUPSUpgradeable, Initializable {
         bytes32 userOpHash
     ) internal override virtual returns (uint256 validationData) {
         bytes32 hash = userOpHash.toEthSignedMessageHash();
-        // NOTE:
-        // We raise error instead of returning SIG_VALIDATION_FAILED so that even simulation can't leak anything
-        // without user approval.
-        // require(owner == ECDSA.recover(hash, userOp.signature), "IX-AA20 denied");
         if (owner == ECDSA.recover(hash, userOp.signature))
             return SIG_VALIDATION_SUCCESS;
         else
@@ -149,6 +146,8 @@ contract LuminexAccount is BaseAccount, UUPSUpgradeable, Initializable {
     }
 
     function _call(address target, uint256 value, bytes memory data) internal {
+        _requireCallAllowed(target, data);
+
         (bool success, bytes memory result) = target.call{value: value}(data);
         if (!success) {
             assembly {
@@ -160,6 +159,8 @@ contract LuminexAccount is BaseAccount, UUPSUpgradeable, Initializable {
     }
 
     function callAndReturn(address target, uint256 value, bytes memory data) external onlyTrusted() returns (bytes memory) {
+        _requireCallAllowed(target, data);
+
         (bool success, bytes memory result) = target.call{value: value}(data);
         if (!success) {
             assembly {
@@ -167,6 +168,15 @@ contract LuminexAccount is BaseAccount, UUPSUpgradeable, Initializable {
             }
         }
         return result;
+    }
+
+    function factoryBalanceOf(IERC20 token) public view returns (uint256) {
+        require(
+            msg.sender == address(_factory),
+            "IX-AA30 Balance only for factory"
+        );
+
+        return token.balanceOf(address(this));
     }
 
     /**
@@ -194,6 +204,14 @@ contract LuminexAccount is BaseAccount, UUPSUpgradeable, Initializable {
 
     function _authorizeUpgrade(address) internal view override {
         _onlyOwner();
+    }
+
+    function _requireCallAllowed(address _target, bytes memory _callData) internal view {
+        require(
+            _target == address(this) ||
+            _factory.isCallAllowed(_target, _callData),
+            "IX-AA20 Call not allowed"
+        );
     }
 }
 

@@ -37,7 +37,8 @@ contract LuminexAccountComplianceManager is Ownable, ILuminexComplianceManager {
         _;
     }
 
-    constructor(IAccountFactory _accountsFactory) {
+    constructor(address _owner, IAccountFactory _accountsFactory) {
+        _transferOwnership(_owner);
         accountsFactory = _accountsFactory;
     }
 
