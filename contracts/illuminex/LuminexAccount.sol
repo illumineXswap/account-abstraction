@@ -167,6 +167,9 @@ contract LuminexAccount is BaseAccount, UUPSUpgradeable, Initializable {
                 revert(add(result, 32), mload(result))
             }
         }
+
+        _complianceManager.record(target, value, data);
+
         return result;
     }
 
