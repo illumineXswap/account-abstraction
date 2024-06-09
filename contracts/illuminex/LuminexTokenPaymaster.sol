@@ -7,6 +7,7 @@ pragma solidity ^0.8.23;
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
 
 import "../core/BasePaymaster.sol";
 import "../core/Helpers.sol";
@@ -23,7 +24,7 @@ import "./LuminexAccountFactory.sol";
  * - the paymaster checks a signature to agree to PAY for GAS.
  * - the account checks a signature to prove identity and account ownership.
  */
-contract LuminexTokenPaymaster is BasePaymaster, LuminexNativeExchange {
+contract LuminexTokenPaymaster is BasePaymaster, LuminexNativeExchange, Pausable {
     using SafeERC20 for IERC20;
     using ECDSA for bytes32;
     using UserOperationLib for UserOperation;
@@ -92,7 +93,7 @@ contract LuminexTokenPaymaster is BasePaymaster, LuminexNativeExchange {
         bool signatureValid = trustedSigners[ECDSA.recover(hash, signature)];
 
         validationData = _packValidationData(
-            !signatureValid,
+            !signatureValid || paused(),
             validUntil,
             validAfter
         );
@@ -102,7 +103,7 @@ contract LuminexTokenPaymaster is BasePaymaster, LuminexNativeExchange {
         );
     }
 
-    function _postOp(PostOpMode opMode, bytes calldata context, uint256 actualGasCost) internal override {
+    function _postOp(PostOpMode opMode, bytes calldata context, uint256 actualGasCost) internal override whenNotPaused() {
         (address sender, IERC20 token) = abi.decode(context, (address, IERC20));
         uint256 _debt = debt[sender][token];
         uint256 charge = tokensRequiredForNative(token, actualGasCost + COST_OF_POST) + _debt;
@@ -133,6 +134,14 @@ contract LuminexTokenPaymaster is BasePaymaster, LuminexNativeExchange {
 
     function skim(IERC20 token, address payable to) public onlyOwner {
         token.safeTransfer(to, token.balanceOf(address(this)));
+    }
+
+    function pause() public onlyOwner() {
+        _pause();
+    }
+
+    function unpause() public onlyOwner() {
+        _unpause();
     }
 
     function parsePaymasterAndData(bytes calldata paymasterAndData) public pure returns(uint48 validUntil, uint48 validAfter, IERC20 token, uint256 maxAllowance, bytes calldata signature) {
