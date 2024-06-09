@@ -57,6 +57,10 @@ contract LuminexTokenPaymaster is BasePaymaster, LuminexNativeExchange {
         accountFactory = _accountFactory;
     }
 
+    function _isValidBuyer(address _buyer) internal view virtual override returns (bool) {
+        return accountFactory.deployedAccounts(_buyer);
+    }
+
     /**
      * verify our external signer signed this request.
      * the "paymasterAndData" is expected to be the paymaster and a signature over the entire request params

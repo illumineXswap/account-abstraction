@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "./LuminexOracle.sol";
 
-contract LuminexNativeExchange is Ownable {
+abstract contract LuminexNativeExchange is Ownable {
     using SafeERC20 for IERC20;
 
     address public beneficiary;
@@ -42,7 +42,11 @@ contract LuminexNativeExchange is Ownable {
         emit OracleSet(token, oracle);
     }
 
+    function _isValidBuyer(address _buyer) internal view virtual returns (bool);
+
     function buyNativeForToken(IERC20 _token, uint256 tokenValue, uint256 minNative, address payable receiver) public {
+        require(_isValidBuyer(msg.sender), "Invalid buyer");
+
         LuminexOracle oracle = oracles[_token];
         require(address(oracle) != address(0), "IX-EX10 Token not supported");
         require(address(this).balance >= minNative, "IX-EX11 Not enough liquidity");
