@@ -32,6 +32,7 @@ contract LuminexAccountFactory is IAccountFactory, ILuminexAllowedCalls, ISealed
     LuminexAccount public immutable accountImplementation;
 
     mapping(address => bool) private _deployedAccounts;
+    uint public deployedAccountsCount;
 
     LuminexAccountComplianceManager public complianceManager;
 
@@ -103,6 +104,7 @@ contract LuminexAccountFactory is IAccountFactory, ILuminexAllowedCalls, ISealed
         ret = LuminexAccount(payable(_proxy));
 
         _deployedAccounts[address(_proxy)] = true;
+        deployedAccountsCount++;
 
         _updateRingKey(keccak256(abi.encodePacked(
             block.number,
