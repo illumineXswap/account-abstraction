@@ -65,17 +65,18 @@ const deploySimpleAccountFactory: DeployFunction = async function (hre: HardhatR
   const chainId = hre.network.config.chainId
   assert(typeof chainId === 'number', 'ChainId must be a number')
 
+  const factoryDeployed = await hre.deployments.get('LuminexAccountFactory')
+
   const entrypointDeployment = await hre.deployments.get('EntryPoint')
   const paymasterDeployed = await hre.deployments.deploy(
     'LuminexTokenPaymaster', {
       from,
-      args: [entrypointDeployment.address, from, WNATIVE[chainId]],
+      args: [entrypointDeployment.address, from, WNATIVE[chainId], factoryDeployed.address],
       gasLimit: 6e6,
       log: true,
       deterministicDeployment: true
     })
 
-  const factoryDeployed = await hre.deployments.get('LuminexAccountFactory')
 
   const factory = await hre.ethers.getContractAt('LuminexAccountFactory', factoryDeployed.address)
   const paymaster = await hre.ethers.getContractAt('LuminexTokenPaymaster', paymasterDeployed.address)
