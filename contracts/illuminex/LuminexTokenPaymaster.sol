@@ -145,10 +145,17 @@ contract LuminexTokenPaymaster is BasePaymaster, LuminexNativeExchange, Pausable
     }
 
     function parsePaymasterAndData(bytes calldata paymasterAndData) public pure returns(uint48 validUntil, uint48 validAfter, IERC20 token, uint256 maxAllowance, bytes calldata signature) {
-        (validUntil, validAfter, token, maxAllowance) = abi.decode(
+        uint _packedData;
+        (_packedData, maxAllowance) = abi.decode(
             paymasterAndData[VALID_TIMESTAMP_OFFSET:SIGNATURE_OFFSET],
-            (uint48, uint48, IERC20, uint256)
+            (uint256, uint256)
         );
+
+        ValidationData memory _val = _parseValidationData(_packedData);
+        validUntil = _val.validUntil;
+        validAfter = _val.validAfter;
+        token = IERC20(_val.aggregator);
+        
         signature = paymasterAndData[SIGNATURE_OFFSET:];
     }
 
@@ -193,9 +200,6 @@ contract LuminexTokenPaymaster is BasePaymaster, LuminexNativeExchange, Pausable
     }
 
     function setSignerTrust(address signer, bool trust) public onlyOwner() {
-        if (trust)
-            trustedSigners[signer] = true;
-        else
-            delete trustedSigners[signer];
+        trustedSigners[signer] = trust;
     }
 }
