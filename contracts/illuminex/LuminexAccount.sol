@@ -158,19 +158,49 @@ contract LuminexAccount is BaseAccount, UUPSUpgradeable, Initializable {
         _complianceManager.record(target, value, data);
     }
 
-    function callAndReturn(address target, uint256 value, bytes memory data) external onlyTrusted() returns (bytes memory) {
-        _requireCallAllowed(target, data);
+    function callAndReturn(address target, uint256 value, bytes memory data) external onlyTrusted() returns (bytes memory result) {
+        (, result) = _callAndReturn(target, value, data, false);
+    }
 
-        (bool success, bytes memory result) = target.call{value: value}(data);
-        if (!success) {
+
+    /**
+     * execute a sequence of transactions
+     * @dev to reduce gas consumption for trivial case (no value), use a zero-length array to mean zero value
+     * @param dest an array of destination addresses
+     * @param value an array of values to pass to each call. can be zero-length for no-value calls
+     * @param func an array of calldata to pass to each call
+     * @param allowFailure flag if revert with first error occured
+     */
+    function callBatchAndReturn(address[] calldata dest, uint256[] calldata value, bytes[] calldata func, bool allowFailure) external onlyTrusted returns (bool[] memory successes, bytes[] memory results) {
+        require(dest.length == func.length && (value.length == 0 || value.length == func.length), "wrong array lengths");
+        successes = new bool[](dest.length);
+        results = new bytes[](dest.length);
+
+        if (value.length == 0) {
+            for (uint256 i = 0; i < dest.length; i++) {
+                (successes[i], results[i]) = _callAndReturn(dest[i], 0, func[i], allowFailure);
+            }
+        } else {
+            for (uint256 i = 0; i < dest.length; i++) {
+                (successes[i], results[i]) = _callAndReturn(dest[i], value[i], func[i], allowFailure);
+            }
+        }
+    }
+
+    function _callAndReturn(address target, uint256 value, bytes memory data, bool allowFailure) 
+    internal 
+    returns (bool success, bytes memory result) 
+    {
+         _requireCallAllowed(target, data);
+
+        (success, result) = target.call{value: value}(data);
+        if (!success && !allowFailure) {
             assembly {
                 revert(add(result, 32), mload(result))
             }
+        } else {
+            _complianceManager.record(target, value, data);
         }
-
-        _complianceManager.record(target, value, data);
-
-        return result;
     }
 
     function factoryBalanceOf(IERC20 token) public view returns (uint256) {
