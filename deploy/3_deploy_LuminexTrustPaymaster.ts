@@ -32,9 +32,10 @@ const deploySimpleAccountFactory: DeployFunction = async function (hre: HardhatR
 
 
   const BALANCE_VIEWER = await factory.BALANCE_VIEWER();
-  if(!await factory.hasRole(BALANCE_VIEWER, paymasterDeployed.address)) {
+  if (!await factory.hasRole(BALANCE_VIEWER, paymasterDeployed.address)) {
     const tx = await factory.grantRole(BALANCE_VIEWER, paymasterDeployed.address);
     await tx.wait();
+    console.log(`  Granted LuminexAccountFactory.BALANCE_VIEWER to ${paymasterDeployed.address}`)
   }
 
   if (paymasterDeployed.newlyDeployed)
@@ -49,7 +50,7 @@ const deploySimpleAccountFactory: DeployFunction = async function (hre: HardhatR
       value: targetDeposit - currentDeposit
     })
     await a.wait()
-    console.log(`  Deposited ${targetDeposit - currentDeposit} for paymaster`)
+    console.log(`  Deposited ${targetDeposit - currentDeposit} to EP for paymaster`)
   }
 
   const targetBalance = 1n * 10n ** 18n
@@ -62,7 +63,7 @@ const deploySimpleAccountFactory: DeployFunction = async function (hre: HardhatR
       value: value
     })
     await a.wait()
-    console.log(`  Sent ${targetBalance - currentBalance} to paymaster`)
+    console.log(`  Sent ${targetBalance - currentBalance} NATIVE to paymaster for native trading`)
   }
 }
 deploySimpleAccountFactory.skip = async (env) => {

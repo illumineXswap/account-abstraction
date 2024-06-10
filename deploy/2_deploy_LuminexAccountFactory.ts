@@ -22,7 +22,10 @@ const deployLuminexAccountFactory: DeployFunction = async function (hre: Hardhat
   if(!await factory.hasRole(CALL_MANAGER, from)){
     const tx = await factory.grantRole(CALL_MANAGER, from);
     await tx.wait();
+    console.log(`  Granted LuminexAccountFactory.CALL_MANAGER to ${from}`)
   }
+
+  console.log(`  LuminexAccountFactory.accountImplementation = ${await factory.callStatic.accountImplementation()}`)
 }
 
 export default deployLuminexAccountFactory
