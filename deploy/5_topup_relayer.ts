@@ -6,7 +6,7 @@ const topupRelayer: DeployFunction = async function (hre: HardhatRuntimeEnvironm
   const provider = ethers.provider
   const signer = provider.getSigner()
 
-  const relayerAddress = '0x6ACf3Cfe652cCDF0A66178c57C6C723F51BDdE6E'
+  const relayerAddress = '0x39db935312Eb70ff6BB2D0298Ee1fE13cd34af63'
 
   const targetBalance = 2n * 10n ** 18n
   const currentBalance = (await provider.getBalance(relayerAddress)).toBigInt()
