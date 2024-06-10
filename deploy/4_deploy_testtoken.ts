@@ -27,10 +27,12 @@ const deploySimpleAccountFactory: DeployFunction = async function (hre: HardhatR
   /// ////////////////////////////
 
   const pMATIC = '0x1c4d39340e4c16f1F6E18891B927332604894231'
+  const pwROSE = '0x1Ffd8A218FDc5B38210D64CBB45F40DC55A4e019'
 
-  const tokensToSetOracles = [pMATIC]
+  const tokensToSetOracles = [pMATIC, pwROSE]
   const prices = new Map<string, [nativeReceived: bigint, tokenCost: bigint]>([
-    [pMATIC, [618455n, 100000n]]
+    [pMATIC, [618455n, 100000n]],
+    [pwROSE, [1n, 1n]]
   ])
 
   const chainId = hre.network.config.chainId
