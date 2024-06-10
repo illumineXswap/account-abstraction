@@ -34,7 +34,7 @@ contract LuminexAccountFactory is IAccountFactory, ILuminexAllowedCalls, ISealed
     mapping(address => bool) private _deployedAccounts;
     uint public deployedAccountsCount;
 
-    LuminexAccountComplianceManager public complianceManager;
+    LuminexAccountComplianceManager public immutable complianceManager;
 
     event CallsAllowed(address indexed target, bytes4[] selectors);
     event CallsDisallowed(address indexed target, bytes4[] selectors);
@@ -44,6 +44,7 @@ contract LuminexAccountFactory is IAccountFactory, ILuminexAllowedCalls, ISealed
     constructor(address _owner, IEntryPoint _entryPoint)
     RotatingKeys(keccak256(abi.encodePacked(block.number)), type(LuminexAccountFactory).name)
     {
+        complianceManager = new LuminexAccountComplianceManager(_owner, this);
         accountImplementation = new LuminexAccount(_entryPoint, this, complianceManager);
 
         _transferOwnership(_owner);
@@ -51,10 +52,6 @@ contract LuminexAccountFactory is IAccountFactory, ILuminexAllowedCalls, ISealed
         _grantRole(DEFAULT_ADMIN_ROLE, _owner);
         _setRoleAdmin(BALANCE_VIEWER, DEFAULT_ADMIN_ROLE);
         _setRoleAdmin(CALL_MANAGER, DEFAULT_ADMIN_ROLE);
-    }
-
-    function setComplianceManager(LuminexAccountComplianceManager _manager) public onlyOwner() {
-        complianceManager = _manager;
     }
 
     function allowCalls(address target, bytes4[] calldata selectors) public onlyRole(CALL_MANAGER) {
