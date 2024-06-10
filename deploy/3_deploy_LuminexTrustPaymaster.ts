@@ -19,12 +19,12 @@ const deploySimpleAccountFactory: DeployFunction = async function (hre: HardhatR
   const entrypointDeployment = await hre.deployments.get('EntryPoint')
   const paymasterDeployed = await hre.deployments.deploy(
     'LuminexTokenPaymaster', {
-      from,
-      args: [entrypointDeployment.address, from, WNATIVE[chainId], factoryDeployed.address],
-      gasLimit: 6e6,
-      log: true,
-      deterministicDeployment: true
-    })
+    from,
+    args: [entrypointDeployment.address, from, WNATIVE[chainId], factoryDeployed.address],
+    gasLimit: 6e6,
+    log: true,
+    deterministicDeployment: true
+  })
 
 
   const factory = await hre.ethers.getContractAt('LuminexAccountFactory', factoryDeployed.address)
@@ -38,8 +38,7 @@ const deploySimpleAccountFactory: DeployFunction = async function (hre: HardhatR
     console.log(`  Granted LuminexAccountFactory.BALANCE_VIEWER to ${paymasterDeployed.address}`)
   }
 
-  if (paymasterDeployed.newlyDeployed)
-    await approveCalls(factory, paymaster)
+  await approveCalls(factory, paymaster)
 
   const entryPoint = await ethers.getContractAt('EntryPoint', entrypointDeployment.address)
 
@@ -79,30 +78,42 @@ async function approveCalls(factory: LuminexAccountFactory, paymaster: LuminexTo
   }
 
 
-  const foreignTargetAllowedCalls = {
-    // BalanceRegistry
-    '0xaA12E7aB0Ed8dd1814979bc6bd21E2aC17CD2F0E': [
-      selector('getHeldTokens(uint256,uint256)')
-    ],
-    // SapphireEndpoint
-    '0xDd1Ee07b46C7eD888671a646F3c7a37394e8cF85': [
-      selector('proxyPass(address,uint256,bytes)')
-    ]
-  }
 
-  const getSelectorsWhitelist = (): Record<string, string[]> => {
-    const paymasterTargetAllowedCalls = {
-      [paymaster.address]: [
+  const foreignTargetAllowedCalls = [
+    [
+      'BalanceRegistry',
+      '0xaA12E7aB0Ed8dd1814979bc6bd21E2aC17CD2F0E',
+      [
+        selector('getHeldTokens(uint256,uint256)')
+      ],
+    ],
+    [
+      'SapphireEndpoint',
+      '0xDd1Ee07b46C7eD888671a646F3c7a37394e8cF85',
+      [
+        selector('proxyPass(address,uint256,bytes)')
+      ]
+    ]
+  ] as Array<[string, string, string[]]>
+
+
+
+  const getSelectorsWhitelist = (): Array<[string, string, string[]]> => {
+    const paymasterTargetAllowedCalls = [
+      "Paymaster",
+      paymaster.address,
+      [
         selector('buyNativeForToken(address,uint256,uint256,address)'),
         selector('tokensRequiredForNative(address,uint256)'),
         selector('debt(address,address)'),
       ]
-    }
+    ] as [string, string, string[]]
 
-    const tokensAllowedCalls = Object.fromEntries(
+    const tokensAllowedCalls =
       registeredTokens.tokens
         .filter((token) => token.extensions?.illuminexWrapper)
         .map((token) => ([
+          token.symbol,
           token.address,
           [
             selector('transfer(address,uint256)'),
@@ -110,20 +121,31 @@ async function approveCalls(factory: LuminexAccountFactory, paymaster: LuminexTo
             selector('transferFrom(address,address,uint256)'),
             selector('balanceOf(address)')
           ]
-        ]))
-    )
+        ] as [string, string, string[]]))
 
-    return {
+
+    return [
       ...foreignTargetAllowedCalls,
-      ...paymasterTargetAllowedCalls,
+      paymasterTargetAllowedCalls,
       ...tokensAllowedCalls
-    }
+    ]
   }
 
   const allowedCalls = getSelectorsWhitelist()
-  for (const [target, selectors] of Object.entries(allowedCalls)) {
+  for (const [name, target, selectors] of allowedCalls) {
+    let allRegistered = true
+    let i = 0;
+    for (let i = 0; i < selectors.length && allRegistered; i++) {
+      const selector = selectors[i];
+      allRegistered = await factory.callStatic.isCallAllowed(target, selector)
+    }
+
+    if (allRegistered) continue
+
     const tx = await factory.allowCalls(target, selectors)
-    console.log({ tx });
     await tx.wait();
+    console.log('  Allowed calls', {
+      name, target, selectors
+    })
   }
 }
