@@ -7,7 +7,7 @@ const deployLuminexAccountFactory: DeployFunction = async function (hre: Hardhat
   const from = await provider.getSigner().getAddress()
 
   const entrypoint = await hre.deployments.get('EntryPoint')
-  await hre.deployments.deploy(
+  const deploy = await hre.deployments.deploy(
     'LuminexAccountFactory', {
       from,
       args: [from, entrypoint.address],
@@ -16,11 +16,13 @@ const deployLuminexAccountFactory: DeployFunction = async function (hre: Hardhat
       deterministicDeployment: true
     })
 
-  // await hre.deployments.deploy('TestCounter', {
-  //   from,
-  //   log: true,
-  //   deterministicDeployment: true
-  // })
+  const factory = await hre.ethers.getContractAt("LuminexAccountFactory", deploy.address);
+
+  const CALL_MANAGER = await factory.CALL_MANAGER();
+  if(!await factory.hasRole(CALL_MANAGER, from)){
+    const tx = await factory.grantRole(CALL_MANAGER, from);
+    await tx.wait();
+  }
 }
 
 export default deployLuminexAccountFactory

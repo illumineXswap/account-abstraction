@@ -18,6 +18,16 @@ const topupRelayer: DeployFunction = async function (hre: HardhatRuntimeEnvironm
     await a.wait()
     console.log(`  Deposited ${targetBalance - currentBalance} for relayer`)
   }
+  
+  const paymasterDeployed = await hre.deployments.get('LuminexTokenPaymaster')
+  const paymaster = await hre.ethers.getContractAt('LuminexTokenPaymaster', paymasterDeployed.address)
+
+  const isTrusted = await paymaster.callStatic.trustedSigners(relayerAddress)
+  if (!isTrusted) {
+    const tx = await paymaster.setSignerTrust(relayerAddress, true)
+    await tx.wait()
+    console.log(`  Set trusted signer ${relayerAddress}`)
+  }
 }
 
 export default topupRelayer
