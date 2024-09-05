@@ -35,6 +35,8 @@ contract LuminexAccount is BaseAccount, UUPSUpgradeable, Initializable {
     LuminexAccountFactory private immutable _factory;
     ILuminexComplianceManager private immutable _complianceManager;
 
+    uint256 private constant SIGNATURE_OFFSET = 48 * 2 / 8; // 2*uint48 / 8 bytes
+
     event SimpleAccountInitialized(IEntryPoint indexed entryPoint, address indexed owner);
 
     modifier onlyOwner() {
@@ -138,11 +140,13 @@ contract LuminexAccount is BaseAccount, UUPSUpgradeable, Initializable {
         UserOperation calldata userOp,
         bytes32 userOpHash
     ) internal override virtual returns (uint256 validationData) {
-        bytes32 hash = userOpHash.toEthSignedMessageHash();
-        if (owner == ECDSA.recover(hash, userOp.signature))
-            return SIG_VALIDATION_SUCCESS;
-        else
-            return SIG_VALIDATION_FAILED;
+        (uint48 validUntil, uint48 validAfter) = abi.decode(userOp.signature[:SIGNATURE_OFFSET],(uint48, uint48));
+        bytes calldata signature = userOp.signature[SIGNATURE_OFFSET:];
+
+        bytes32 hash = keccak256(abi.encodePacked(validUntil, validAfter, userOpHash)).toEthSignedMessageHash();
+        bool sigFailed = owner != ECDSA.recover(hash, signature);
+
+        return _packValidationData(sigFailed,validUntil,validAfter);
     }
 
     function _call(address target, uint256 value, bytes memory data) internal {
