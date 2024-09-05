@@ -11,10 +11,12 @@ contract NonceManager is INonceManager {
     /**
      * The next valid sequence number for a given nonce key.
      */
-    mapping(address => mapping(uint192 => uint256)) public nonceSequenceNumber;
+    mapping(address => mapping(uint192 => uint256)) private nonceSequenceNumber;
 
     function getNonce(address sender, uint192 key)
     public view override returns (uint256 nonce) {
+        // Only account can see its nonce
+        require(msg.sender == sender, "IX-EP20");
         return nonceSequenceNumber[sender][key] | (uint256(key) << 64);
     }
 

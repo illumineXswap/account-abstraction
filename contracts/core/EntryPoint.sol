@@ -538,14 +538,14 @@ contract EntryPoint is IEntryPoint, StakeManager, NonceManager, ReentrancyGuard 
      * @param opIndex the index of this userOp into the "opInfos" array
      * @param userOp the userOp to validate
      */
-    function _validatePrepayment(uint256 opIndex, UserOperation calldata userOp, UserOpInfo memory outOpInfo, bool _skipHash)
+    function _validatePrepayment(uint256 opIndex, UserOperation calldata userOp, UserOpInfo memory outOpInfo, bool _IX_skipChecks)
     private returns (uint256 validationData, uint256 paymasterValidationData) {
 
         uint256 preGas = gasleft();
         MemoryUserOp memory mUserOp = outOpInfo.mUserOp;
         _copyUserOpToMemory(userOp, mUserOp);
 
-        if (!_skipHash) {
+        if (!_IX_skipChecks) {
             outOpInfo.userOpHash = getUserOpHash(userOp);
         }
 
@@ -559,7 +559,7 @@ contract EntryPoint is IEntryPoint, StakeManager, NonceManager, ReentrancyGuard 
         (uint256 requiredPreFund) = _getRequiredPrefund(mUserOp);
         (gasUsedByValidateAccountPrepayment, validationData) = _validateAccountPrepayment(opIndex, userOp, outOpInfo, requiredPreFund);
 
-        if (!_validateAndUpdateNonce(mUserOp.sender, mUserOp.nonce)) {
+        if (!_IX_skipChecks && !_validateAndUpdateNonce(mUserOp.sender, mUserOp.nonce)) {
             revert FailedOp(opIndex, "AA25 invalid account nonce");
         }
 
