@@ -93,6 +93,13 @@ async function approveCalls(factory: LuminexAccountFactory, paymaster: LuminexTo
       [
         selector('proxyPass(address,uint256,bytes)')
       ]
+    ],
+    [
+      'XeBTCVault',
+      '0x847E32bd2274038f4de7b56244e496708C4A19BC',
+      [
+        selector('withdraw(bytes,uint64,uint64,bytes32)')
+      ]
     ]
   ] as Array<[string, string, string[]]>
 
@@ -112,13 +119,14 @@ async function approveCalls(factory: LuminexAccountFactory, paymaster: LuminexTo
     const tokensAllowedCalls =
       registeredTokens.tokens
         .map((token) => ([
-          token.symbol,
+          token.ixSlug,
           token.address,
           [
             selector('transfer(address,uint256)'),
             selector('approve(address,uint256)'),
             selector('transferFrom(address,address,uint256)'),
-            selector('balanceOf(address)')
+            selector('balanceOf(address)'),
+            selector('unwrap(uint256,address)'),
           ]
         ] as [string, string, string[]]))
 

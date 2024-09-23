@@ -130,7 +130,7 @@ function gcd(left: bigint, right: bigint): bigint {
 
 
 function prop(input: string): [mantise: bigint, base: bigint] {
-  const regexp = /^(\d+)(?:\.\d+)$/
+  const regexp = /^(\d+)(?:\.(\d+))?$/
   // biome-ignore lint/style/noNonNullAssertion: we know what we're doing
   const match = input.match(regexp)!
   const mantise = BigInt(match[1]+(match[2]??''))
