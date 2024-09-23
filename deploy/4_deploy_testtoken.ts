@@ -1,11 +1,11 @@
-import { HardhatRuntimeEnvironment } from 'hardhat/types'
-import { DeployFunction } from 'hardhat-deploy/types'
+import type { HardhatRuntimeEnvironment } from 'hardhat/types'
+import type { DeployFunction } from 'hardhat-deploy/types'
 import { ethers } from 'hardhat'
 import assert from 'node:assert'
 import { WNATIVE } from './const'
 import registeredTokens from '../tokens.json'
 
-const deploySimpleAccountFactory: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
+const deploySimpleAccountFactory: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const provider = ethers.provider
   const from = await provider.getSigner().getAddress()
 

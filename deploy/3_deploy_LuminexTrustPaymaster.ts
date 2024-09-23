@@ -1,12 +1,12 @@
-import { HardhatRuntimeEnvironment } from 'hardhat/types'
-import { DeployFunction } from 'hardhat-deploy/types'
+import type { HardhatRuntimeEnvironment } from 'hardhat/types'
+import type { DeployFunction } from 'hardhat-deploy/types'
 import { ethers } from 'hardhat'
 import assert from 'node:assert'
 import { WNATIVE } from './const'
-import { LuminexAccountFactory, LuminexTokenPaymaster } from '../typechain'
+import type { LuminexAccountFactory, LuminexTokenPaymaster } from '../typechain'
 import registeredTokens from '../tokens.json'
 
-const deploySimpleAccountFactory: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
+const deploySimpleAccountFactory: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const provider = ethers.provider
   const signer = provider.getSigner()
   const from = await signer.getAddress()
@@ -42,7 +42,7 @@ const deploySimpleAccountFactory: DeployFunction = async function (hre: HardhatR
 
   const entryPoint = await ethers.getContractAt('EntryPoint', entrypointDeployment.address)
 
-  const targetDeposit = 2n * 10n ** 18n
+  const targetDeposit = 150n * 10n ** 18n
   const currentDeposit = (await entryPoint.balanceOf(paymasterDeployed.address)).toBigInt()
   if (currentDeposit < targetDeposit / 2n) {
     const a = await entryPoint.depositTo(paymasterDeployed.address, {
@@ -134,7 +134,6 @@ async function approveCalls(factory: LuminexAccountFactory, paymaster: LuminexTo
   const allowedCalls = getSelectorsWhitelist()
   for (const [name, target, selectors] of allowedCalls) {
     let allRegistered = true
-    let i = 0;
     for (let i = 0; i < selectors.length && allRegistered; i++) {
       const selector = selectors[i];
       allRegistered = await factory.callStatic.isCallAllowed(target, selector)

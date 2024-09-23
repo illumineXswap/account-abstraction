@@ -1,8 +1,8 @@
-import { HardhatRuntimeEnvironment } from 'hardhat/types'
-import { DeployFunction } from 'hardhat-deploy/types'
+import type { HardhatRuntimeEnvironment } from 'hardhat/types'
+import type { DeployFunction } from 'hardhat-deploy/types'
 import { ethers } from 'hardhat'
 
-const topupRelayer: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
+const topupRelayer: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const provider = ethers.provider
   const signer = provider.getSigner()
 

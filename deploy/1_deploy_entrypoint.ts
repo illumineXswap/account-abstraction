@@ -1,10 +1,11 @@
-import { HardhatRuntimeEnvironment } from 'hardhat/types'
-import { DeployFunction } from 'hardhat-deploy/types'
+import type { HardhatRuntimeEnvironment } from 'hardhat/types'
+import type { DeployFunction } from 'hardhat-deploy/types'
 import { ethers } from 'hardhat'
 
-const deployEntryPoint: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
+const deployEntryPoint: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const provider = ethers.provider
   const from = await provider.getSigner().getAddress()
+  console.log(`Owner ${from}`)
 
   const entrypointDeployment = await hre.deployments.deploy(
     'EntryPoint',
