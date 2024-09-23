@@ -111,7 +111,6 @@ async function approveCalls(factory: LuminexAccountFactory, paymaster: LuminexTo
 
     const tokensAllowedCalls =
       registeredTokens.tokens
-        .filter((token) => token.extensions?.illuminexWrapper)
         .map((token) => ([
           token.symbol,
           token.address,

@@ -2,7 +2,7 @@ import type { HardhatRuntimeEnvironment } from 'hardhat/types'
 import type { DeployFunction } from 'hardhat-deploy/types'
 import { ethers } from 'hardhat'
 import assert from 'node:assert'
-import { WNATIVE } from './const'
+import { DECIMALS, WNATIVE } from './const'
 import registeredTokens from '../tokens.json'
 
 const deploySimpleAccountFactory: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
@@ -10,33 +10,6 @@ const deploySimpleAccountFactory: DeployFunction = async (hre: HardhatRuntimeEnv
   const from = await provider.getSigner().getAddress()
 
   ////////////////////////////////
-
-  /*
-  1 BNB = 5388 ROSE
-  1 USDT BSC = 9.173699832 ROSE
-  1 ETH ETH = 39878.8 ROSE
-  1 USDC ETH = 10.841645261367047 ROSE
-  1 USDT ETH = 10.841645261367047 ROSE
-  1 ETH ARBITRUM = 36812.04274074493 ROSE
-  1 MATIC = 6.505047202855522 ROSE
-  1 IX = 7.201971511492144 ROSE
-  1 OCEAN = 12.443690162457884 ROSE
-  */
-
-  const tokensToSetOracles = registeredTokens.tokens
-    .filter((token) => token.extensions?.illuminexWrapper)
-  const prices = new Map<string, [nativeReceived: bigint, tokenCost: bigint]>([
-    ['pbscBNB', [5388n, 1n]],
-    ['pbscUSDT', [9173n, 1000n]],
-    ['pethETH', [398788n, 10n]],
-    ['pethUSDC', [1084164n, 100000n]],
-    ['pethUSDT', [1084164n, 100000n]],
-    ['parbETH', [3681204n, 100n]],
-    ['ppolygonMATIC', [650504n, 100000n]],
-    ['pIX', [72019n, 10000n]],
-    ['pOCEAN', [12443n, 1000n]],
-    ['pwROSE', [1n, 1n]],
-  ])
 
   const chainId = hre.network.config.chainId
   assert(typeof chainId === 'number', 'ChainId must be a number')
@@ -48,8 +21,51 @@ const deploySimpleAccountFactory: DeployFunction = async (hre: HardhatRuntimeEnv
 
   const paymaster = await ethers.getContractAt('LuminexTokenPaymaster', (await hre.deployments.get('LuminexTokenPaymaster')).address)
 
+  // pROSE shortcircut
+  const oracleResult = await hre.deployments.deploy(
+    'LuminexOracleConst', {
+    from,
+    args: [from, wNativeAddress, wNativeAddress],
+    gasLimit: 6e6,
+    log: true,
+    deterministicDeployment: true
+  })
+
+  if (oracleResult.newlyDeployed) console.log(`    Oracle pROSE deployed ${oracleResult.address}`)
+
+  const oracle = await ethers.getContractAt('LuminexOracleConst', oracleResult.address)
+
+  const val = await Promise.all([oracle.token0Value(), oracle.token1Value()])
+  if (!val[0].eq(1) || !val[1].eq(1)) {
+    const tx = await oracle.setValues(1, 1)
+    await tx.wait()
+    console.log(`    Oracle pROSE (${oracleResult.address}) price set [1, 1]`)
+  }
+
+  if (await paymaster.oracles(wNativeAddress) === oracleResult.address) {
+    await (await paymaster.setOracle(wNativeAddress, oracleResult.address)).wait()
+    console.log(`    Oracle pROSE (${oracleResult.address}) registered`)
+  }
+
+  const humanPriceProportions = new Map<typeof registeredTokens['tokens'][number]['ixSlug'], string>([
+    ['BNB', '5388'],
+    ['USDT@bsc', '9.173699832'],
+    ['ETH', '39878.8'],
+    ['USDC@eth', '10.841645261367047'],
+    ['USDT@eth', '10.841645261367047'],
+    ['ETH@arbitrum', '36812.04274074493'],
+    ['MATIC', '6.505047202855522'],
+    ['BTC', '878354.127267101'],
+  ])
+
   const txs = []
-  for (const token of tokensToSetOracles) {
+  for (const token of registeredTokens.tokens) {
+    const rawPrice = humanPriceProportions.get(token.ixSlug)
+    if (!rawPrice) {
+      console.log(`No price found for ${token.ixSlug}`)
+      continue
+    }
+
     const oracleResult = await hre.deployments.deploy(
       'LuminexOracleConst', {
       from,
@@ -61,14 +77,21 @@ const deploySimpleAccountFactory: DeployFunction = async (hre: HardhatRuntimeEnv
 
     const oracle = await ethers.getContractAt('LuminexOracleConst', oracleResult.address)
 
-    const price = prices.get(token.symbol)
-    const val = await Promise.all([oracle.token0Value(), oracle.token1Value()])
-    if ((price != null) && (price[0] !== val[0].toBigInt() || price[1] !== val[1].toBigInt())) {
-      const tx = await oracle.setValues(price[0], price[1])
+
+    const [significatn, base] = prop(rawPrice)
+    let nativeReceived = significatn * 10n ** BigInt(DECIMALS)
+    let tokenCost = base * 10n ** BigInt(token.decimals)
+    const denominator = gcd(nativeReceived, tokenCost)
+    nativeReceived/=denominator
+    tokenCost/=denominator
+
+    const [curReceived, curCost] = await Promise.all([oracle.token0Value(), oracle.token1Value()])
+    if (nativeReceived !== curReceived.toBigInt() || tokenCost !== curCost.toBigInt()) {
+      const tx = await oracle.setValues(nativeReceived, tokenCost)
       txs.push(tx.wait().then(() => {
-        console.log(`  Oracle ${token.symbol} (${oracle.address}) price set [${price.join()}]`)
+        console.log(`  Oracle ${token.ixSlug} (${oracle.address}) price set [${nativeReceived}, ${tokenCost}]`)
       }).catch(e => {
-        console.log({ tokenAddress: token.address, oracleAddress: oracleResult.address, price })
+        console.log({ tokenAddress: token.address, oracleAddress: oracleResult.address, price: [nativeReceived, tokenCost] })
         throw e
       }))
     }
@@ -91,3 +114,26 @@ const deploySimpleAccountFactory: DeployFunction = async (hre: HardhatRuntimeEnv
 }
 
 export default deploySimpleAccountFactory
+
+function gcd(left: bigint, right: bigint): bigint {
+  let a = left;
+  let b = right;
+  // Euclidean algorithm
+  while (b !== 0n) {
+    const temp = b;
+    b = a % b;
+    a = temp;
+  }
+
+  return a;
+}
+
+
+function prop(input: string): [mantise: bigint, base: bigint] {
+  const regexp = /^(\d+)(?:\.\d+)$/
+  // biome-ignore lint/style/noNonNullAssertion: we know what we're doing
+  const match = input.match(regexp)!
+  const mantise = BigInt(match[1]+(match[2]??''))
+  const base = 10n ** BigInt(match[2]?.length ?? 0)
+  return [mantise, base]
+}
