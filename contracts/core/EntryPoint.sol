@@ -62,13 +62,16 @@ contract EntryPoint is IEntryPoint, StakeManager, NonceManager, ReentrancyGuard 
      * @param opInfo the opInfo filled by validatePrepayment for this userOp.
      * @return collected the total amount this userOp paid.
      */
-    function _executeUserOp(uint256 opIndex, UserOperation calldata userOp, UserOpInfo memory opInfo) private returns (uint256 collected) {
+    function _executeUserOp(uint256 opIndex, UserOperation calldata userOp, UserOpInfo memory opInfo) private returns (uint256 collected, bool success) {
         uint256 preGas = gasleft();
         bytes memory context = getMemoryBytesFromOffset(opInfo.contextOffset);
 
         try this.innerHandleOp(userOp.callData, opInfo, context) returns (uint256 _actualGasCost) {
             collected = _actualGasCost;
+            success = true;
         } catch {
+            success = false;
+
             bytes32 innerRevertCode;
             assembly {
                 returndatacopy(0, 0, 32)
@@ -110,7 +113,8 @@ contract EntryPoint is IEntryPoint, StakeManager, NonceManager, ReentrancyGuard 
         emit BeforeExecution();
 
         for (uint256 i = 0; i < opslen; i++) {
-            collected += _executeUserOp(i, ops[i], opInfos[i]);
+            (uint256 _collected,) = _executeUserOp(i, ops[i], opInfos[i]);
+            collected += _collected;
         }
 
         _compensate(beneficiary, collected);
@@ -176,7 +180,8 @@ contract EntryPoint is IEntryPoint, StakeManager, NonceManager, ReentrancyGuard 
             uint256 opslen = ops.length;
 
             for (uint256 i = 0; i < opslen; i++) {
-                collected += _executeUserOp(opIndex, ops[i], opInfos[opIndex]);
+                (uint256 _collected,) = _executeUserOp(opIndex, ops[i], opInfos[opIndex]);
+                collected += _collected;
                 opIndex++;
             }
         }
@@ -186,23 +191,17 @@ contract EntryPoint is IEntryPoint, StakeManager, NonceManager, ReentrancyGuard 
     }
 
     /// @inheritdoc IEntryPoint
-    function simulateHandleOp(UserOperation calldata op, address target, bytes calldata targetCallData) external override {
-        require(target == address(0), "Invalid target");
-
+    function simulateHandleOp(UserOperation calldata op, address, bytes calldata) external override {
         UserOpInfo memory opInfo;
         _simulationOnlyValidations(op);
         (uint256 validationData, uint256 paymasterValidationData) = _validatePrepayment(0, op, opInfo, false);
         ValidationData memory data = _intersectTimeRange(validationData, paymasterValidationData);
 
         numberMarker();
-        uint256 paid = _executeUserOp(0, op, opInfo);
+        (uint256 paid, bool userOpSuccess) = _executeUserOp(0, op, opInfo);
         numberMarker();
-        bool targetSuccess;
-        bytes memory targetResult;
-        if (target != address(0)) {
-            (targetSuccess, targetResult) = target.call(targetCallData);
-        }
-        revert ExecutionResult(opInfo.preOpGas, paid, data.validAfter, data.validUntil, targetSuccess, targetResult);
+
+        revert ExecutionResult(opInfo.preOpGas, paid, data.validAfter, data.validUntil, userOpSuccess, new bytes(0));
     }
 
 
