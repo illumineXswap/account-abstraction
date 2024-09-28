@@ -140,7 +140,9 @@ contract LuminexAccount is BaseAccount, UUPSUpgradeable, Initializable {
         UserOperation calldata userOp,
         bytes32 userOpHash
     ) internal override virtual returns (uint256 validationData) {
-        (uint48 validUntil, uint48 validAfter) = abi.decode(userOp.signature[:SIGNATURE_OFFSET],(uint48, uint48));
+        uint48 validUntil = uint48(bytes6(userOp.signature[0:6]));
+        uint48 validAfter = uint48(bytes6(userOp.signature[6:12]));
+
         bytes calldata signature = userOp.signature[SIGNATURE_OFFSET:];
 
         bytes32 hash = keccak256(abi.encodePacked(validUntil, validAfter, userOpHash)).toEthSignedMessageHash();
