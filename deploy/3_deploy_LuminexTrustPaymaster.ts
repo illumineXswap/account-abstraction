@@ -81,22 +81,22 @@ async function approveCalls(factory: LuminexAccountFactory, paymaster: LuminexTo
 
   const foreignTargetAllowedCalls = [
     [
-      'BalanceRegistry',
-      '0xaA12E7aB0Ed8dd1814979bc6bd21E2aC17CD2F0E',
+      'DepositVault',
+      '0xfb88fe57D84636EC1eAfF8d8B9Ad0E771f7e3456',
       [
-        selector('getHeldTokens(uint256,uint256)')
+        selector('deposit(bytes32,address,uint256)')
       ],
     ],
     [
       'SapphireEndpoint',
-      '0xDd1Ee07b46C7eD888671a646F3c7a37394e8cF85',
+      '0xdC811ae9D2B36002304F6f0e471b1dEA87Ca8bb5',
       [
         selector('proxyPass(address,uint256,bytes)')
       ]
     ],
     [
       'XeBTCVault',
-      '0x847E32bd2274038f4de7b56244e496708C4A19BC',
+      '0xE24A32b3D0FBbf887A5957D83Ad32AdA8A043126',
       [
         selector('withdraw(bytes,uint64,uint64,bytes32)')
       ]

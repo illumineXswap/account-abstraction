@@ -54,7 +54,7 @@ const deploySimpleAccountFactory: DeployFunction = async (hre: HardhatRuntimeEnv
     ['USDC@eth', '10.841645261367047'],
     ['USDT@eth', '10.841645261367047'],
     ['ETH@arbitrum', '36812.04274074493'],
-    ['MATIC', '6.505047202855522'],
+    ['POL', '6.505047202855522'],
     ['BTC', '878354.127267101'],
   ])
 
