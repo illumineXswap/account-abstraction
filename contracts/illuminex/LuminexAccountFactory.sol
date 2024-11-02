@@ -3,7 +3,6 @@ pragma solidity ^0.8.23;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import "@openzeppelin/contracts/utils/Create2.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -15,6 +14,8 @@ import "../interfaces/IEntryPoint.sol";
 import "./LuminexAccount.sol";
 import "./RotatingKeys.sol";
 import "./LuminexAccountComplianceManager.sol";
+
+import "../utils/ERC1967Proxy.sol";
 
 /* solhint-disable avoid-low-level-calls */
 
@@ -94,7 +95,7 @@ contract LuminexAccountFactory is IAccountFactory, ILuminexAllowedCalls, ISealed
             return LuminexAccount(payable(addr));
         }
 
-        ERC1967Proxy _proxy = new ERC1967Proxy{salt: salt}(
+        EventlessERC1967Proxy _proxy = new EventlessERC1967Proxy{salt: salt}(
             address(accountImplementation),
             abi.encodeCall(LuminexAccount.initialize, (accountOwner))
         );
@@ -116,7 +117,7 @@ contract LuminexAccountFactory is IAccountFactory, ILuminexAllowedCalls, ISealed
      */
     function getAddress(address accountOwner, bytes32 salt) public view returns (address) {
         return Create2.computeAddress(bytes32(salt), keccak256(abi.encodePacked(
-            type(ERC1967Proxy).creationCode,
+            type(EventlessERC1967Proxy).creationCode,
             abi.encode(
                 address(accountImplementation),
                 abi.encodeCall(LuminexAccount.initialize, (accountOwner))
