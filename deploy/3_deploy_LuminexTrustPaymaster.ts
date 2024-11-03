@@ -95,6 +95,13 @@ async function approveCalls(factory: LuminexAccountFactory, paymaster: LuminexTo
       ]
     ],
     [
+      'ProxyGuard',
+      '0x5d27cEc109Ca45D2ABe8f759b61AcBdd4cC80679',
+      [
+        selector('proxyPass(address,uint256,bytes)')
+      ]
+    ],
+    [
       'XeBTCVault',
       '0xE24A32b3D0FBbf887A5957D83Ad32AdA8A043126',
       [
