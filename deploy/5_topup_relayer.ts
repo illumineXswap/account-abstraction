@@ -9,7 +9,8 @@ const topupRelayer: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const relayers = [
     '0x6ACf3Cfe652cCDF0A66178c57C6C723F51BDdE6E',
     '0x39db935312Eb70ff6BB2D0298Ee1fE13cd34af63',
-    '0x306C28dA7B2cd20222E841dcDbe0956625C16349'
+    '0x306C28dA7B2cd20222E841dcDbe0956625C16349',
+    '0x09C20A8a1a56Fa308b471b495Aad762fb1818235'
   ]
 
   for (const relayerAddress of relayers) {
