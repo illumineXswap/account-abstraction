@@ -57,6 +57,7 @@ const deploySimpleAccountFactory: DeployFunction = async (hre: HardhatRuntimeEnv
     ['ETH@arbitrum', '36812.04274074493'],
     ['POL', '6.505047202855522'],
     ['BTC', '878354.127267101'],
+    ['WBTC@eth', '878354.127267101']
   ])
 
   const txs = []
